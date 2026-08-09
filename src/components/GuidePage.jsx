@@ -71,9 +71,9 @@ export function GuidePage({ onStartSession }) {
       <section className="reset-banner">
         <div className="reset-icon"><Lightning size={27} weight="fill" /></div>
         <div>
-          <span className="section-kicker light-kicker">Deliberately temporary</span>
-          <h2>RELOAD = CLEAN SLATE</h2>
-          <p>Workout checks, timers and the food calculator live only in this browser tab. There is no account, database, analytics or saved history.</p>
+          <span className="section-kicker light-kicker">Persisted by design</span>
+          <h2>RELOAD = RESUME</h2>
+          <p>Active workouts, checked sets, selected exercise versions, session history and weight entries are saved to your private journal. Only the food quick-compare tray clears on reload.</p>
         </div>
         <CheckCircle size={36} weight="fill" />
       </section>

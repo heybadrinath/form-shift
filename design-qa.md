@@ -75,6 +75,10 @@ The food comparison tray was the deliberate exception: reload cleared it because
 
 ## Defects resolved during the pass
 
+### Guide persistence message
+
+The Guide still contained a prototype-era banner claiming that reload removed workout state and that no database or history existed. It now states the actual boundary: workout progress, history, selected variants and weight entries persist, while only the food quick-compare tray clears on reload. A source-wide regression test rejects the obsolete persistence claims.
+
 ### Leg-curl guide matching
 
 The exercise-guide matcher could classify a leg-curl identifier as the generic curl family. The specific leg-curl match now runs before the generic curl match, so leg-curl exercises receive the correct machine variants, illustrations, and cues.
