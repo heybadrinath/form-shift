@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Barbell, WarningCircle } from "@phosphor-icons/react";
 import { appApi, ApiError } from "./api.js";
+import { startSingleFlight } from "./asyncActionGate.js";
 import { AppChrome } from "./components/AppChrome.jsx";
 import { FoodIndex } from "./components/FoodIndex.jsx";
 import { GuidePage } from "./components/GuidePage.jsx";
@@ -67,6 +68,7 @@ export function App() {
   const [appState, setAppState] = useState(emptyState);
   const [mutationKey, setMutationKey] = useState(null);
   const [error, setError] = useState("");
+  const mutationLockRef = useRef(null);
 
   const activeTemplate = useMemo(
     () => sessions.find((session) => session.id === appState.activeSession?.templateId) ?? null,
@@ -114,39 +116,56 @@ export function App() {
   }, [page]);
 
   async function runMutation(key, action) {
-    setMutationKey(key);
-    setError("");
-    try {
-      return await action();
-    } catch (mutationError) {
-      if (mutationError instanceof ApiError && mutationError.status === 401) {
-        setAuthState("locked");
-        setAppState(emptyState);
+    const ticket = startSingleFlight(mutationLockRef, key, async () => {
+      setMutationKey(key);
+      setError("");
+      try {
+        return await action();
+      } catch (mutationError) {
+        if (mutationError instanceof ApiError && mutationError.status === 401) {
+          setAuthState("locked");
+          setAppState(emptyState);
+        }
+        setError(readableError(mutationError));
+        throw mutationError;
+      } finally {
+        setMutationKey(null);
       }
-      setError(readableError(mutationError));
-      throw mutationError;
-    } finally {
-      setMutationKey(null);
+    });
+
+    if (!ticket.started) {
+      await ticket.promise.catch(() => undefined);
+      return false;
     }
+
+    await ticket.promise;
+    return true;
   }
 
   async function unlock(pin) {
     try {
-      await runMutation("unlock", () => appApi.unlock(pin));
-      await refresh({ openActive: true });
+      return await runMutation("unlock", async () => {
+        await appApi.unlock(pin);
+        await refresh({ openActive: true });
+      });
     } catch {
       // The owner gate displays the shared error state.
+      return false;
     }
   }
 
   async function lock() {
     try {
-      await appApi.lock();
-    } finally {
-      setAuthState("locked");
-      setAppState(emptyState);
-      setPage("workouts");
-      setError("");
+      return await runMutation("lock", async () => {
+        await appApi.lock();
+        setAuthState("locked");
+        setAppState(emptyState);
+        setPage("workouts");
+        setError("");
+      });
+    } catch {
+      // Keep the current authenticated state when the server could not lock it.
+      return false;
     }
   }
 
@@ -160,95 +179,130 @@ export function App() {
 
   async function startSession(templateId) {
     const template = sessions.find((session) => session.id === templateId);
-    if (!template) return;
+    if (!template) return false;
     try {
-      const payload = await runMutation("start", () => appApi.startWorkout(templateId, defaultVariants(template)));
-      setAppState((current) => ({
-        ...current,
-        activeSession: payload.session,
-        logicalDaySession: payload.session,
-      }));
-      setSelectedSessionId(templateId);
-      setPage("session");
+      return await runMutation("start", async () => {
+        try {
+          const payload = await appApi.startWorkout(templateId, defaultVariants(template));
+          setAppState((current) => ({
+            ...current,
+            activeSession: payload.session,
+            logicalDaySession: payload.session,
+          }));
+          setSelectedSessionId(templateId);
+          setPage("session");
+        } catch (startError) {
+          await refresh().catch(() => undefined);
+          throw startError;
+        }
+      });
     } catch {
-      await refresh().catch(() => undefined);
+      return false;
     }
   }
 
   async function toggleSet(exerciseId, setNumber, completed) {
     const sessionId = appState.activeSession.id;
-    const payload = await runMutation(`set:${exerciseId}:${setNumber}`, () => (
-      appApi.toggleSet(sessionId, exerciseId, setNumber, completed)
-    ));
-    setAppState((current) => ({
-      ...current,
-      activeSession: mergeSet(current.activeSession, payload.set, payload.exercise),
-    }));
+    try {
+      return await runMutation(`set:${exerciseId}:${setNumber}`, async () => {
+        const payload = await appApi.toggleSet(sessionId, exerciseId, setNumber, completed);
+        setAppState((current) => ({
+          ...current,
+          activeSession: mergeSet(current.activeSession, payload.set, payload.exercise),
+        }));
+      });
+    } catch {
+      return false;
+    }
   }
 
   async function selectVariant(exerciseId, variant) {
-    const payload = await runMutation(`variant:${exerciseId}`, () => (
-      appApi.selectVariant(appState.activeSession.id, exerciseId, variant)
-    ));
-    setAppState((current) => ({
-      ...current,
-      activeSession: mergeExercise(current.activeSession, payload.exercise),
-    }));
+    try {
+      return await runMutation(`variant:${exerciseId}:${variant}`, async () => {
+        const payload = await appApi.selectVariant(appState.activeSession.id, exerciseId, variant);
+        setAppState((current) => ({
+          ...current,
+          activeSession: mergeExercise(current.activeSession, payload.exercise),
+        }));
+      });
+    } catch {
+      return false;
+    }
   }
 
   async function skipExercise(exerciseId) {
     const exercise = appState.activeSession.exercises.find((item) => item.exerciseId === exerciseId);
-    const payload = await runMutation(`skip:${exerciseId}`, () => (
-      appApi.skipExercise(appState.activeSession.id, exerciseId, !exercise?.skippedAt)
-    ));
-    setAppState((current) => ({
-      ...current,
-      activeSession: mergeExercise(current.activeSession, payload.exercise),
-    }));
+    try {
+      return await runMutation(`skip:${exerciseId}`, async () => {
+        const payload = await appApi.skipExercise(
+          appState.activeSession.id,
+          exerciseId,
+          !exercise?.skippedAt,
+        );
+        setAppState((current) => ({
+          ...current,
+          activeSession: mergeExercise(current.activeSession, payload.exercise),
+        }));
+      });
+    } catch {
+      return false;
+    }
   }
 
   async function finishSession(weightKg) {
     const sessionId = appState.activeSession.id;
     let weightSaveError = null;
-    await runMutation("finish", async () => {
-      await appApi.finishWorkout(sessionId);
-      if (weightKg !== null) {
-        try {
-          await appApi.addWeight({ weightKg });
-        } catch (weightError) {
-          weightSaveError = weightError;
+    try {
+      return await runMutation("finish", async () => {
+        await appApi.finishWorkout(sessionId);
+        if (weightKg !== null) {
+          try {
+            await appApi.addWeight({ weightKg });
+          } catch (weightError) {
+            weightSaveError = weightError;
+          }
         }
-      }
-      await refresh();
-    });
-    setPage("analytics");
-    if (weightSaveError) {
-      setError("The workout was saved, but the weight entry was not. Add it again from Analytics.");
+        await refresh();
+        setPage("analytics");
+        if (weightSaveError) {
+          setError("The workout was saved, but the weight entry was not. Add it again from Analytics.");
+        }
+      });
+    } catch {
+      return false;
     }
   }
 
   async function endIncomplete() {
-    await runMutation("end-incomplete", async () => {
-      await appApi.endIncomplete(appState.activeSession.id);
-      await refresh();
-    });
-    setPage("calendar");
+    try {
+      return await runMutation("end-incomplete", async () => {
+        await appApi.endIncomplete(appState.activeSession.id);
+        await refresh();
+        setPage("calendar");
+      });
+    } catch {
+      return false;
+    }
   }
 
   async function addWeight({ date, weightKg }) {
     const measuredAt = new Date(`${date}T12:00:00+05:30`).toISOString();
-    await runMutation("weight:add", async () => {
+    const started = await runMutation("weight:add", async () => {
       await appApi.addWeight({ weightKg, measuredAt });
       await refresh();
     });
+    if (!started) throw new Error("Another change is still being saved.");
+    return true;
   }
 
   async function editWeight(entryId, { date, weightKg }) {
     const measuredAt = new Date(`${date}T12:00:00+05:30`).toISOString();
-    await runMutation(`weight:${entryId}`, async () => {
+    const started = await runMutation(`weight:${entryId}`, async () => {
       await appApi.updateWeight(entryId, { weightKg, measuredAt });
       await refresh();
     });
+    if (!started) throw new Error("Another change is still being saved.");
+    return true;
   }
 
   if (authState === "loading") {
@@ -280,6 +334,7 @@ export function App() {
       activePage={page}
       activeSession={appState.activeSession}
       activeTemplate={activeTemplate}
+      mutationKey={mutationKey}
       onNavigate={navigate}
       onLock={lock}
     >
@@ -288,7 +343,8 @@ export function App() {
           selectedSessionId={selectedSessionId}
           activeSession={appState.activeSession}
           logicalDaySession={appState.logicalDaySession}
-          busy={mutationKey === "start"}
+          busy={Boolean(mutationKey)}
+          startBusy={mutationKey === "start"}
           error={error}
           onSelectSession={setSelectedSessionId}
           onStartSession={startSession}
@@ -328,7 +384,11 @@ export function App() {
       )}
 
       {page === "guide" && (
-        <GuidePage onStartSession={() => startSession("A")} />
+        <GuidePage
+          busy={Boolean(mutationKey)}
+          startBusy={mutationKey === "start"}
+          onStartSession={() => startSession("A")}
+        />
       )}
     </AppChrome>
   );

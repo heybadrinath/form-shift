@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 import "./owner-gate.css";
 
 export function OwnerGate({ busy, error, onUnlock }) {
@@ -31,7 +32,7 @@ export function OwnerGate({ busy, error, onUnlock }) {
         <h1>UNLOCK YOUR<br />WORKOUT RUNWAY.</h1>
         <p>The PIN protects your active session, history and weight entries. Your phone stays unlocked for 30 days.</p>
 
-        <form onSubmit={submit}>
+        <form onSubmit={submit} aria-busy={busy}>
           <label htmlFor="owner-pin">Four-digit PIN</label>
           <div className="owner-gate__pin-row">
             <div className="owner-gate__pin-input">
@@ -47,11 +48,20 @@ export function OwnerGate({ busy, error, onUnlock }) {
                 value={pin}
                 onChange={(event) => setPin(event.target.value.replace(/\D/g, ""))}
                 aria-describedby={error ? "unlock-error" : undefined}
+                aria-disabled={busy}
+                disabled={busy}
                 placeholder="••••"
               />
             </div>
-            <button type="submit" disabled={busy || pin.length < 4}>
-              {busy ? "Unlocking" : "Unlock"} <ArrowRight size={20} />
+            <button
+              type="submit"
+              disabled={busy || pin.length < 4}
+              aria-disabled={busy || pin.length < 4}
+              aria-busy={busy}
+            >
+              {busy ? <InlineSpinner /> : null}
+              {busy ? "Unlocking" : "Unlock"}
+              {busy ? null : <ArrowRight size={20} />}
             </button>
           </div>
           {error && (
@@ -88,4 +98,3 @@ export function OwnerGate({ busy, error, onUnlock }) {
     </main>
   );
 }
-

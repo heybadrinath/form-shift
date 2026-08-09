@@ -93,6 +93,7 @@
 }
 
 .owner-gate__pin-row > button:disabled { opacity: 0.4; }
+.owner-gate__pin-row > button[aria-busy="true"] { opacity: 1; }
 
 .owner-gate__error {
   display: flex;

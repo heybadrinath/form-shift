@@ -10,6 +10,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { sessions } from "../data.js";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 
 const weeklyModes = [
   { days: "3 days", sequence: "A · B · C", detail: "Foundation only" },
@@ -22,6 +23,7 @@ export function WorkoutHub({
   activeSession,
   logicalDaySession,
   busy,
+  startBusy,
   error,
   onSelectSession,
   onStartSession,
@@ -30,6 +32,8 @@ export function WorkoutHub({
   const selected = sessions.find((session) => session.id === selectedSessionId) ?? sessions[0];
   const totalSets = selected.exercises.reduce((sum, exercise) => sum + exercise.sets, 0);
   const dayAlreadyUsed = Boolean(logicalDaySession && !activeSession);
+  const startsWorkout = !activeSession && !dayAlreadyUsed;
+  const primaryDisabled = dayAlreadyUsed || (startsWorkout && busy);
 
   const primaryLabel = activeSession
     ? `Continue Session ${activeSession.templateId}`
@@ -54,9 +58,15 @@ export function WorkoutHub({
           <h1>FOLLOW THE ORDER.<br />OWN THE REPS.</h1>
           <p>{selected.summary}</p>
           <div className="hero-actions">
-            <button className="primary-action dark-action" onClick={primaryAction} disabled={busy || dayAlreadyUsed}>
-              <Play size={20} weight="fill" />
-              {busy ? "Starting…" : primaryLabel}
+            <button
+              className="primary-action dark-action"
+              onClick={primaryAction}
+              disabled={primaryDisabled}
+              aria-disabled={primaryDisabled}
+              aria-busy={startBusy}
+            >
+              {startBusy ? <InlineSpinner /> : <Play size={20} weight="fill" />}
+              {startBusy ? "Starting session…" : primaryLabel}
             </button>
             <a className="text-action" href="#exercise-index">
               Preview exercises <ArrowRight size={18} />
@@ -123,8 +133,15 @@ export function WorkoutHub({
               <span className="section-kicker light-kicker">Session {selected.id}</span>
               <h2>EXERCISE INDEX</h2>
             </div>
-            <button className="compact-start" onClick={primaryAction} disabled={busy || dayAlreadyUsed}>
-              <Play size={18} weight="fill" /> {activeSession ? "Continue" : dayAlreadyUsed ? "Logged" : "Start"}
+            <button
+              className="compact-start"
+              onClick={primaryAction}
+              disabled={primaryDisabled}
+              aria-disabled={primaryDisabled}
+              aria-busy={startBusy}
+            >
+              {startBusy ? <InlineSpinner size="sm" /> : <Play size={18} weight="fill" />}
+              {startBusy ? "Starting…" : activeSession ? "Continue" : dayAlreadyUsed ? "Logged" : "Start"}
             </button>
           </div>
           <div className="exercise-index-list">

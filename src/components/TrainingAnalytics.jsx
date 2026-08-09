@@ -23,6 +23,7 @@ import {
   summarizeTraining,
   toLocalDateKey,
 } from "./historyUtils.js";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 import "./TrainingAnalytics.css";
 
 function formatDuration(minutes) {
@@ -176,19 +177,19 @@ export function TrainingAnalytics({
           <Barbell size={25} weight="fill" />
           <span>Weekly frequency</span>
           <strong>{summary.weeklyFrequency}</strong>
-          <small>{summary.weeklyFrequency === 1 ? "session" : "sessions"} since Monday</small>
+          <small>{summary.weeklyFrequency === 1 ? "session" : "sessions"} · since Monday</small>
         </article>
         <article className="training-analytics-metric tone-bg-butter">
           <Timer size={25} weight="fill" />
           <span>Training duration</span>
           <strong>{summary.durationMinutes}</strong>
-          <small>minutes recorded this week</small>
+          <small>minutes · this week</small>
         </article>
         <article className="training-analytics-metric tone-bg-aqua">
           <CheckCircle size={25} weight="fill" />
           <span>Average completion</span>
           <strong>{summary.averageCompletion}%</strong>
-          <small>across this week's sessions</small>
+          <small>this week's sessions</small>
         </article>
       </section>
 
@@ -286,8 +287,10 @@ export function TrainingAnalytics({
                 <b>kg</b>
               </span>
             </label>
-            <button className="training-analytics-save-weight" type="submit" disabled={submitting}>
-              {editingId ? <PencilSimple size={18} weight="bold" /> : <Plus size={18} weight="bold" />}
+            <button className="training-analytics-save-weight" type="submit" disabled={submitting} aria-busy={submitting}>
+              {submitting
+                ? <InlineSpinner />
+                : editingId ? <PencilSimple size={18} weight="bold" /> : <Plus size={18} weight="bold" />}
               {submitting ? "Saving…" : editingId ? "Save change" : "Add weight"}
             </button>
             <p id="training-weight-form-message" className="training-analytics-form-message" aria-live="polite">{formMessage}</p>

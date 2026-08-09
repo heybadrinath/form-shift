@@ -9,8 +9,9 @@ import {
   Timer,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 
-export function GuidePage({ onStartSession }) {
+export function GuidePage({ busy, startBusy, onStartSession }) {
   return (
     <div className="guide-page page-enter">
       <section className="guide-hero tone-bg-sage">
@@ -18,8 +19,15 @@ export function GuidePage({ onStartSession }) {
           <span className="section-kicker">The operating rules</span>
           <h1>LEANER IS THE GOAL.<br />CONSISTENCY IS THE METHOD.</h1>
           <p>This app keeps the decisions small: follow the session order, stop for joint pain, control delivery portions and judge progress over weeks.</p>
-          <button className="primary-action dark-action" onClick={onStartSession}>
-            <Play size={20} weight="fill" /> Start foundation Session A
+          <button
+            className="primary-action dark-action"
+            onClick={onStartSession}
+            disabled={busy}
+            aria-disabled={busy}
+            aria-busy={startBusy}
+          >
+            {startBusy ? <InlineSpinner /> : <Play size={20} weight="fill" />}
+            {startBusy ? "Starting Session A…" : "Start foundation Session A"}
           </button>
         </div>
         <div className="reference-stack">

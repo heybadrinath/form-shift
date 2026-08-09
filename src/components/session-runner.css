@@ -192,6 +192,10 @@
 }
 
 .session-v2__variants button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   min-height: 40px;
   border: 1px solid rgba(32, 32, 31, 0.18);
   border-radius: 12px;
@@ -249,6 +253,22 @@
 .session-v2__sets button small { align-self: start; opacity: 0.62; }
 .session-v2__sets button.is-complete { color: var(--paper); background: var(--ink); }
 .session-v2__sets button.is-complete > span { color: var(--ink); background: var(--aqua); }
+
+.session-v2__variants button:disabled,
+.session-v2__sets button:disabled,
+.session-v2__skip:disabled,
+.session-v2__end-incomplete:disabled,
+.session-v2__finish-modal button:disabled,
+.session-v2__finish-modal input:disabled {
+  opacity: 0.5;
+}
+
+.session-v2__variants button[aria-busy="true"],
+.session-v2__sets button[aria-busy="true"],
+.session-v2__skip[aria-busy="true"],
+.session-v2__finish-modal button[aria-busy="true"] {
+  opacity: 0.88;
+}
 
 .session-v2__instructions {
   padding: 15px;

@@ -6,16 +6,16 @@
 
 A fresh authenticated browser pass covered the current desktop and mobile interface, owner unlock, persistent workout lifecycle, training history, weight editing, food interactions, and database cleanup. No unresolved release-blocking visual or functional issue remained at the end of the pass.
 
-## Current evidence
+## Reference captures
 
 | Artifact | Viewport | Evidence |
 | --- | ---: | --- |
-| `docs/screenshots/dashboard-desktop.png` | 1440 × 1050 | Current workout dashboard, navigation rail, utility header, selected-session hero, and five-session system |
-| `docs/screenshots/session-mobile.png` | 390 × 844 | Current authenticated runner, elapsed timer, progress, exercise illustration, variant choice, and bottom navigation |
-| `docs/screenshots/food-mobile.png` | 390 × 844 | Current food-index landing view, food artwork, comparison entry point, and bottom navigation |
-| `docs/screenshots/analytics-mobile.png` | 390 × 844 | Current Analytics hero, weekly training state, metric cards, and constrained mobile layout |
+| `docs/screenshots/dashboard-desktop.png` | 1440 × 1050 | Authenticated workout dashboard, navigation rail, utility header, selected-session hero, and five-session system |
+| `docs/screenshots/session-mobile.png` | 390 × 844 | Authenticated runner, elapsed timer, progress, exercise illustration, variant choice, and bottom navigation |
+| `docs/screenshots/food-mobile.png` | 390 × 844 | Food-index landing view, food artwork, comparison entry point, and bottom navigation |
+| `docs/screenshots/analytics-mobile.png` | 390 × 844 | Analytics hero, weekly training state, metric cards, and constrained mobile layout before the later density pass |
 
-The captures use the current Workouts, Food, Calendar, and Analytics information architecture. They replace the older root-level presentation captures as the documentation source of truth.
+The captures show the same Workouts, Food, Calendar, and Analytics information architecture used by the application. They are representative portfolio evidence rather than pixel-current release snapshots; the Calendar and mobile Analytics layouts received a later refinement pass described below.
 
 ## Desktop comparison
 
@@ -57,10 +57,16 @@ The current interface was checked at 390 × 844 across the runner, food index, C
 
 ### Calendar and Analytics
 
-- Calendar displayed the ended workout on its logical day and opened its session details.
+- Calendar displayed workouts on their logical days, summarized the current month, visualized weekly activity, returned to the current month, and opened a selected day's session details.
 - Analytics reflected the saved session in weekly frequency, duration, completion, session mix, and recent history.
 - A weight entry could be added and then edited, with the revised value retained after refresh.
-- The Analytics page stayed within the 390 px viewport after min-width hardening; cards, labels, bars, and the weight form no longer forced horizontal expansion.
+- The Analytics page stayed within both 390 px and 320 px viewports after the density pass; summary cards, labels, bars, the weight form, and recent history no longer force page-level horizontal expansion.
+
+### Interaction feedback
+
+- Auth, session-start, set, variant, skip, finish, incomplete-session, and weight mutations expose a working label and spinner while the request is in flight.
+- A synchronous lock prevents a second mutation from starting before React has rendered the disabled state, so rapid double clicks cannot submit duplicate writes.
+- Navigation and page content use short, reduced-motion-safe transitions while data mutations continue to wait for confirmed API responses before updating persistent UI state.
 
 ## Authentication and persistence
 
@@ -91,9 +97,9 @@ The runner could update the selected setup while leaving the heading too generic
 
 Analytics content could retain an intrinsic width larger than the mobile viewport. Minimum-width constraints were hardened so the grid, panels, charts, labels, and form can shrink inside 390 px without horizontal overflow.
 
-## Cleanup and database state
+## Seeded review state
 
-The workout sessions and weight entries created for QA were deleted after the screenshots and interaction checks were complete. The database was queried after cleanup and verified empty of QA rows.
+The review database is intentionally populated with deterministic sample history: 25 workout sessions across Sessions A–E and 10 body-weight entries. The seed command skips logical workout days occupied by genuine sessions, and rerunning it replaces only its own deterministic rows. `npm run db:seed:reset` removes those sample rows later without deleting genuine journal entries.
 
 ## Automated verification
 
@@ -102,11 +108,11 @@ npm test
 npm run build
 ```
 
-The automated suites cover history calculations, signed-cookie authentication, the 04:00 `Asia/Kolkata` logical-day boundary, session invariants, skip/completion timestamps, workout-history shaping, template variants, schema safeguards, protected API mutations, and static-hosting packaging. The production build verifies the client bundle and expected packaging outputs.
+The automated suites cover single-flight action locking, Calendar metrics, seed-data relationships, history calculations, signed-cookie authentication, the 04:00 `Asia/Kolkata` logical-day boundary, session invariants, skip/completion timestamps, workout-history shaping, template variants, schema safeguards, protected API mutations, and static-hosting packaging. The production build verifies the client bundle and expected packaging outputs.
 
 Verification rerun on 2026-08-09:
 
-- `npm test` — passed, 31 tests.
+- `npm test` — passed, 41 tests.
 - `npm run build` — passed.
 
 final result: passed

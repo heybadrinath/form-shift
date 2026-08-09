@@ -7,6 +7,7 @@ import {
   LockKeyOpen,
   Play,
 } from "@phosphor-icons/react";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 import "./app-chrome-v2.css";
 
 const navItems = [
@@ -30,9 +31,13 @@ export function AppChrome({
   activeSession,
   activeTemplate,
   children,
+  mutationKey,
   onLock,
   onNavigate,
 }) {
+  const busy = Boolean(mutationKey);
+  const lockBusy = mutationKey === "lock";
+
   return (
     <div className="site-stage">
       <div className="app-shell">
@@ -58,7 +63,17 @@ export function AppChrome({
 
           <div className="app-chrome-v2__rail-actions">
             <button onClick={() => onNavigate("guide")} aria-label="Open workout guide"><Info size={19} /></button>
-            <button onClick={onLock} aria-label="Lock application"><LockKeyOpen size={19} /></button>
+            <button
+              onClick={onLock}
+              disabled={busy}
+              aria-disabled={busy}
+              aria-busy={lockBusy}
+              aria-label={lockBusy ? "Locking application" : "Lock application"}
+            >
+              {lockBusy
+                ? <InlineSpinner label="Locking application" size="sm" />
+                : <LockKeyOpen size={19} />}
+            </button>
           </div>
         </aside>
 
@@ -71,7 +86,18 @@ export function AppChrome({
             <div className="header-context">
               <button className="app-chrome-v2__guide" onClick={() => onNavigate("guide")}><Info size={18} /> Guide</button>
               <div className="target-pill">~2,000 kcal · 100–120 g protein</div>
-              <button className="app-chrome-v2__lock" onClick={onLock} aria-label="Lock app"><LockKeyOpen size={19} /></button>
+              <button
+                className="app-chrome-v2__lock"
+                onClick={onLock}
+                disabled={busy}
+                aria-disabled={busy}
+                aria-busy={lockBusy}
+                aria-label={lockBusy ? "Locking application" : "Lock app"}
+              >
+                {lockBusy
+                  ? <InlineSpinner label="Locking application" size="sm" />
+                  : <LockKeyOpen size={19} />}
+              </button>
             </div>
           </header>
 
@@ -103,4 +129,3 @@ export function AppChrome({
     </div>
   );
 }
-

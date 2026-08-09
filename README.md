@@ -19,7 +19,7 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 
 ## Screenshots
 
-These captures come from the completed authenticated browser QA pass. They show the current desktop dashboard and the current mobile runner, food index, and analytics views.
+These representative captures come from an authenticated browser QA pass. They show the desktop dashboard and the mobile runner, food index, and analytics views; the Calendar and mobile Analytics layouts have since received additional density and interaction refinements.
 
 ![Current desktop workout dashboard](./docs/screenshots/dashboard-desktop.png)
 
@@ -92,6 +92,14 @@ npm run db:migrate
 
 This applies the checked-in migrations from `drizzle/`. Use `npm run db:generate` only after intentionally changing `server/db/schema.js`.
 
+For a populated local or review environment, the repository also includes an idempotent sample-data script:
+
+```bash
+npm run db:seed
+```
+
+It adds several weeks of clearly identified workout sessions and weight entries without replacing existing workout days. Running it again refreshes only those sample rows. Remove the sample rows later with `npm run db:seed:reset`; neither command deletes genuine journal entries.
+
 ### 4. Start the full app locally
 
 If the Vercel CLI is not already installed, either install it globally or run it through `npx`:
@@ -112,7 +120,7 @@ Run the complete automated test suite:
 npm test
 ```
 
-The test command covers history calculations, authentication and signed cookies, the 04:00 logical-day boundary, workout invariants, workout-history shaping, template variants, schema safeguards, API authentication, and static-hosting packaging.
+The test command covers action single-flight behavior, Calendar metrics, deterministic seed relationships, history calculations, authentication and signed cookies, the 04:00 logical-day boundary, workout invariants, workout-history shaping, template variants, schema safeguards, API authentication, and static-hosting packaging.
 
 Build the production assets with:
 

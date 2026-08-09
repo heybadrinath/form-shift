@@ -13,6 +13,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { guideForExercise } from "../exerciseLibrary.js";
+import { InlineSpinner } from "./InlineSpinner.jsx";
 import "./session-runner.css";
 
 function formatElapsed(startedAt, now) {
@@ -74,6 +75,10 @@ export function SessionRunner({
   const [showFinish, setShowFinish] = useState(false);
   const [showEndIncomplete, setShowEndIncomplete] = useState(false);
   const [weight, setWeight] = useState("");
+  const busy = Boolean(mutationKey);
+  const skipBusy = mutationKey === `skip:${session.exercises[currentIndex].id}`;
+  const finishBusy = mutationKey === "finish";
+  const endIncompleteBusy = mutationKey === "end-incomplete";
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -84,12 +89,13 @@ export function SessionRunner({
     const closeOnEscape = (event) => {
       if (event.key !== "Escape") return;
       setExpandedImage(false);
+      if (busy) return;
       setShowFinish(false);
       setShowEndIncomplete(false);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
+  }, [busy]);
 
   const currentExercise = session.exercises[currentIndex];
   const currentState = exerciseState(record, currentExercise);
@@ -107,11 +113,11 @@ export function SessionRunner({
   const skippedCount = session.exercises.filter((exercise) => exerciseState(record, exercise).skippedAt).length;
   const progress = Math.round((handledCount / session.exercises.length) * 100);
   const allHandled = handledCount === session.exercises.length;
-  const busy = Boolean(mutationKey);
 
   async function toggleSet(setNumber) {
     const wasCompleted = currentState.completedSets.has(setNumber);
-    await onToggleSet(currentExercise.id, setNumber, !wasCompleted);
+    const started = await onToggleSet(currentExercise.id, setNumber, !wasCompleted);
+    if (!started) return;
     if (!wasCompleted && currentState.completedSets.size + 1 >= currentExercise.sets) {
       window.setTimeout(() => setCurrentIndex((index) => (
         nextOpenIndex(session, record, index, currentExercise.id)
@@ -121,7 +127,8 @@ export function SessionRunner({
 
   async function skipCurrent() {
     const wasSkipped = Boolean(currentState.skippedAt);
-    await onSkipExercise(currentExercise.id);
+    const started = await onSkipExercise(currentExercise.id);
+    if (!started) return;
     if (!wasSkipped) {
       setCurrentIndex((index) => nextOpenIndex(session, record, index, currentExercise.id));
     }
@@ -130,7 +137,8 @@ export function SessionRunner({
   async function finishSession() {
     const parsed = weight.trim() === "" ? null : Number(weight);
     if (parsed !== null && (!Number.isFinite(parsed) || parsed < 30 || parsed > 250)) return;
-    await onFinish(parsed);
+    const started = await onFinish(parsed);
+    if (!started) return;
     setShowFinish(false);
   }
 
@@ -200,17 +208,24 @@ export function SessionRunner({
               <div className="session-v2__variants" aria-label="Exercise version">
                 <span>Choose your setup</span>
                 <div>
-                  {guide.variants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      className={selectedVariant.id === variant.id ? "is-selected" : ""}
-                      onClick={() => onSelectVariant(currentExercise.id, variant.id)}
-                      aria-pressed={selectedVariant.id === variant.id}
-                      disabled={busy || Boolean(currentState.completedAt)}
-                    >
-                      {variant.label}
-                    </button>
-                  ))}
+                  {guide.variants.map((variant) => {
+                    const variantBusy = mutationKey === `variant:${currentExercise.id}:${variant.id}`;
+                    const variantDisabled = busy || Boolean(currentState.completedAt);
+                    return (
+                      <button
+                        key={variant.id}
+                        className={selectedVariant.id === variant.id ? "is-selected" : ""}
+                        onClick={() => onSelectVariant(currentExercise.id, variant.id)}
+                        aria-pressed={selectedVariant.id === variant.id}
+                        aria-disabled={variantDisabled}
+                        aria-busy={variantBusy}
+                        disabled={variantDisabled}
+                      >
+                        {variantBusy ? <InlineSpinner size="sm" /> : null}
+                        {variantBusy ? `Selecting ${variant.label}…` : variant.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -230,12 +245,14 @@ export function SessionRunner({
                     key={setNumber}
                     className={completed ? "is-complete" : ""}
                     onClick={() => toggleSet(setNumber)}
-                    disabled={busy && !thisSetBusy || Boolean(currentState.skippedAt)}
+                    disabled={busy || Boolean(currentState.skippedAt)}
+                    aria-disabled={busy || Boolean(currentState.skippedAt)}
+                    aria-busy={thisSetBusy}
                     aria-pressed={completed}
                   >
-                    <span>{completed ? <Check size={20} weight="bold" /> : setNumber}</span>
+                    <span>{thisSetBusy ? <InlineSpinner size="sm" /> : completed ? <Check size={20} weight="bold" /> : setNumber}</span>
                     <strong>{currentExercise.sets === 1 ? "Complete block" : `Set ${setNumber}`}</strong>
-                    <small>{completed ? "Recorded" : "Tap when done"}</small>
+                    <small>{thisSetBusy ? "Saving…" : completed ? "Recorded" : "Tap when done"}</small>
                   </button>
                 );
               })}
@@ -255,9 +272,17 @@ export function SessionRunner({
               </div>
             </div>
 
-            <button className="session-v2__skip" onClick={skipCurrent} disabled={busy || Boolean(currentState.completedAt)}>
-              <SkipForward size={18} />
-              {currentState.skippedAt ? "Restore this exercise" : "Skip for pain, time or equipment"}
+            <button
+              className="session-v2__skip"
+              onClick={skipCurrent}
+              disabled={busy || Boolean(currentState.completedAt)}
+              aria-disabled={busy || Boolean(currentState.completedAt)}
+              aria-busy={skipBusy}
+            >
+              {skipBusy ? <InlineSpinner /> : <SkipForward size={18} />}
+              {skipBusy
+                ? currentState.skippedAt ? "Restoring exercise…" : "Skipping exercise…"
+                : currentState.skippedAt ? "Restore this exercise" : "Skip for pain, time or equipment"}
             </button>
           </div>
         </article>
@@ -320,34 +345,36 @@ export function SessionRunner({
       )}
 
       {showFinish && (
-        <div className="session-v2__modal-backdrop" role="presentation" onMouseDown={() => setShowFinish(false)}>
-          <section className="session-v2__finish-modal" role="dialog" aria-modal="true" aria-labelledby="finish-session-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="session-v2__modal-close" onClick={() => setShowFinish(false)} aria-label="Close"><X size={20} /></button>
+        <div className="session-v2__modal-backdrop" role="presentation" onMouseDown={() => { if (!busy) setShowFinish(false); }}>
+          <section className="session-v2__finish-modal" role="dialog" aria-modal="true" aria-labelledby="finish-session-title" aria-busy={finishBusy} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="session-v2__modal-close" onClick={() => setShowFinish(false)} disabled={busy} aria-disabled={busy} aria-label="Close"><X size={20} /></button>
             <CheckCircle size={38} weight="fill" />
             <span>Session {session.id} · {handledCount - skippedCount} completed · {skippedCount} skipped</span>
             <h2 id="finish-session-title">SAVE THIS WORKOUT</h2>
             <p>Your start time, finish time and set checkmarks will stay in your history.</p>
             <label>
               <span>Weight today <small>optional</small></span>
-              <div><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value)} placeholder="73.5" /><strong>kg</strong></div>
+              <div><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value)} disabled={busy} aria-disabled={busy} placeholder="73.5" /><strong>kg</strong></div>
             </label>
-            <button className="primary-action dark-action" onClick={finishSession} disabled={busy}>
-              <CheckCircle size={20} weight="fill" /> Save completed workout
+            <button className="primary-action dark-action" onClick={finishSession} disabled={busy} aria-disabled={busy} aria-busy={finishBusy}>
+              {finishBusy ? <InlineSpinner /> : <CheckCircle size={20} weight="fill" />}
+              {finishBusy ? "Saving workout…" : "Save completed workout"}
             </button>
           </section>
         </div>
       )}
 
       {showEndIncomplete && (
-        <div className="session-v2__modal-backdrop" role="presentation" onMouseDown={() => setShowEndIncomplete(false)}>
-          <section className="session-v2__finish-modal" role="dialog" aria-modal="true" aria-labelledby="end-incomplete-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="session-v2__modal-close" onClick={() => setShowEndIncomplete(false)} aria-label="Close"><X size={20} /></button>
+        <div className="session-v2__modal-backdrop" role="presentation" onMouseDown={() => { if (!busy) setShowEndIncomplete(false); }}>
+          <section className="session-v2__finish-modal" role="dialog" aria-modal="true" aria-labelledby="end-incomplete-title" aria-busy={endIncompleteBusy} onMouseDown={(event) => event.stopPropagation()}>
+            <button className="session-v2__modal-close" onClick={() => setShowEndIncomplete(false)} disabled={busy} aria-disabled={busy} aria-label="Close"><X size={20} /></button>
             <WarningCircle size={38} weight="fill" />
             <span>Your checked sets will remain in history</span>
             <h2 id="end-incomplete-title">END INCOMPLETE?</h2>
             <p>This closes the active workout. It still counts as today's one workout session.</p>
-            <button className="primary-action dark-action" onClick={onEndIncomplete} disabled={busy}>
-              End and save as incomplete
+            <button className="primary-action dark-action" onClick={onEndIncomplete} disabled={busy} aria-disabled={busy} aria-busy={endIncompleteBusy}>
+              {endIncompleteBusy ? <InlineSpinner /> : null}
+              {endIncompleteBusy ? "Ending workout…" : "End and save as incomplete"}
             </button>
           </section>
         </div>
