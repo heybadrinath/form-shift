@@ -1,0 +1,55 @@
+.app-chrome-v2__rail-actions {
+  display: grid;
+  gap: 7px;
+  margin-top: auto;
+  padding-bottom: 14px;
+}
+
+.app-chrome-v2__rail-actions button,
+.app-chrome-v2__lock,
+.app-chrome-v2__guide {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  background: transparent;
+}
+
+.app-chrome-v2__rail-actions button { width: 42px; height: 42px; border-radius: 15px; }
+.app-chrome-v2__lock { width: 38px; height: 38px; border-radius: 50%; }
+.app-chrome-v2__guide { display: flex; gap: 6px; padding: 9px 11px; border-radius: 999px; font-size: 0.72rem; }
+
+.app-chrome-v2__active {
+  display: grid;
+  width: calc(100% - 28px);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 14px 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 17px;
+  text-align: left;
+  color: var(--ink);
+}
+
+.app-chrome-v2__active-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.app-chrome-v2__active > span:nth-child(2) { display: grid; }
+.app-chrome-v2__active small { font: 600 0.58rem/1.2 "IBM Plex Mono", monospace; letter-spacing: 0.07em; text-transform: uppercase; opacity: 0.65; }
+.app-chrome-v2__active strong { font-size: 0.82rem; }
+.app-chrome-v2__active > span:last-child { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 800; }
+
+@media (max-width: 720px) {
+  .app-chrome-v2__guide,
+  .app-chrome-v2__lock { display: none; }
+  .app-chrome-v2__active { width: calc(100% - 16px); margin: 8px 8px 0; }
+}

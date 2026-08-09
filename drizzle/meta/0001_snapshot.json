@@ -1,0 +1,521 @@
+{
+  "id": "67dbba2f-9673-4ba0-825b-627a0fbd50fd",
+  "prevId": "694e34f6-390c-42bb-918c-2bb01af2aa66",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.weight_entries": {
+      "name": "weight_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "weight_kg": {
+          "name": "weight_kg",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "measured_at": {
+          "name": "measured_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logical_day": {
+          "name": "logical_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "weight_entries_measured_at_idx": {
+          "name": "weight_entries_measured_at_idx",
+          "columns": [
+            {
+              "expression": "measured_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "weight_entries_range_check": {
+          "name": "weight_entries_range_check",
+          "value": "\"weight_entries\".\"weight_kg\" >= 20 AND \"weight_entries\".\"weight_kg\" <= 500"
+        },
+        "weight_entries_logical_day_check": {
+          "name": "weight_entries_logical_day_check",
+          "value": "\"weight_entries\".\"logical_day\" = (((\"weight_entries\".\"measured_at\" AT TIME ZONE 'Asia/Kolkata') - interval '4 hours')::date)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.workout_exercises": {
+      "name": "workout_exercises",
+      "schema": "",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exercise_id": {
+          "name": "exercise_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expected_sets": {
+          "name": "expected_sets",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exercise_snapshot": {
+          "name": "exercise_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_variant": {
+          "name": "selected_variant",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "variant_selected_at": {
+          "name": "variant_selected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "workout_exercise_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skipped_at": {
+          "name": "skipped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workout_exercises_session_position_unique": {
+          "name": "workout_exercises_session_position_unique",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "position",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workout_exercises_session_id_workout_sessions_id_fk": {
+          "name": "workout_exercises_session_id_workout_sessions_id_fk",
+          "tableFrom": "workout_exercises",
+          "tableTo": "workout_sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workout_exercises_session_exercise_pk": {
+          "name": "workout_exercises_session_exercise_pk",
+          "columns": [
+            "session_id",
+            "exercise_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workout_exercises_position_check": {
+          "name": "workout_exercises_position_check",
+          "value": "\"workout_exercises\".\"position\" >= 0"
+        },
+        "workout_exercises_expected_sets_check": {
+          "name": "workout_exercises_expected_sets_check",
+          "value": "\"workout_exercises\".\"expected_sets\" > 0"
+        },
+        "workout_exercises_status_timestamp_check": {
+          "name": "workout_exercises_status_timestamp_check",
+          "value": "(\n      (\"workout_exercises\".\"status\" = 'pending' AND \"workout_exercises\".\"completed_at\" IS NULL AND \"workout_exercises\".\"skipped_at\" IS NULL)\n      OR (\"workout_exercises\".\"status\" = 'completed' AND \"workout_exercises\".\"completed_at\" IS NOT NULL AND \"workout_exercises\".\"skipped_at\" IS NULL)\n      OR (\"workout_exercises\".\"status\" = 'skipped' AND \"workout_exercises\".\"completed_at\" IS NULL AND \"workout_exercises\".\"skipped_at\" IS NOT NULL)\n    )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.workout_sessions": {
+      "name": "workout_sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "owner_key": {
+          "name": "owner_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'owner'"
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_snapshot": {
+          "name": "template_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "logical_day": {
+          "name": "logical_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "workout_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason": {
+          "name": "end_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workout_sessions_one_per_logical_day_unique": {
+          "name": "workout_sessions_one_per_logical_day_unique",
+          "columns": [
+            {
+              "expression": "owner_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "logical_day",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workout_sessions_one_active_unique": {
+          "name": "workout_sessions_one_active_unique",
+          "columns": [
+            {
+              "expression": "owner_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"workout_sessions\".\"status\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workout_sessions_started_at_idx": {
+          "name": "workout_sessions_started_at_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workout_sessions_owner_key_check": {
+          "name": "workout_sessions_owner_key_check",
+          "value": "\"workout_sessions\".\"owner_key\" = 'owner'"
+        },
+        "workout_sessions_logical_day_check": {
+          "name": "workout_sessions_logical_day_check",
+          "value": "\"workout_sessions\".\"logical_day\" = (((\"workout_sessions\".\"started_at\" AT TIME ZONE 'Asia/Kolkata') - interval '4 hours')::date)"
+        },
+        "workout_sessions_status_timestamps_check": {
+          "name": "workout_sessions_status_timestamps_check",
+          "value": "(\n      (\"workout_sessions\".\"status\" = 'active' AND \"workout_sessions\".\"completed_at\" IS NULL AND \"workout_sessions\".\"ended_at\" IS NULL)\n      OR (\"workout_sessions\".\"status\" = 'completed' AND \"workout_sessions\".\"completed_at\" IS NOT NULL AND \"workout_sessions\".\"ended_at\" IS NOT NULL)\n      OR (\"workout_sessions\".\"status\" = 'incomplete' AND \"workout_sessions\".\"completed_at\" IS NULL AND \"workout_sessions\".\"ended_at\" IS NOT NULL)\n    )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.workout_sets": {
+      "name": "workout_sets",
+      "schema": "",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exercise_id": {
+          "name": "exercise_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "set_number": {
+          "name": "set_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workout_sets_incomplete_idx": {
+          "name": "workout_sets_incomplete_idx",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "exercise_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"workout_sets\".\"completed_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workout_sets_exercise_fk": {
+          "name": "workout_sets_exercise_fk",
+          "tableFrom": "workout_sets",
+          "tableTo": "workout_exercises",
+          "columnsFrom": [
+            "session_id",
+            "exercise_id"
+          ],
+          "columnsTo": [
+            "session_id",
+            "exercise_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workout_sets_session_exercise_number_pk": {
+          "name": "workout_sets_session_exercise_number_pk",
+          "columns": [
+            "session_id",
+            "exercise_id",
+            "set_number"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workout_sets_number_check": {
+          "name": "workout_sets_number_check",
+          "value": "\"workout_sets\".\"set_number\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.workout_exercise_status": {
+      "name": "workout_exercise_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "completed",
+        "skipped"
+      ]
+    },
+    "public.workout_status": {
+      "name": "workout_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "completed",
+        "incomplete"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
