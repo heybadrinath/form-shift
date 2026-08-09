@@ -1,0 +1,522 @@
+.muscle-exposure {
+  min-width: 0;
+  padding: 21px 15px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.muscle-exposure__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.muscle-exposure__header > div:first-child {
+  min-width: 0;
+}
+
+.muscle-exposure__kicker,
+.muscle-exposure__ledger-heading,
+.muscle-exposure__total,
+.muscle-exposure__days,
+.muscle-map__view-labels,
+.muscle-map__legend,
+.muscle-exposure__ledger li small,
+.muscle-exposure__ledger li b,
+.muscle-exposure__ledger li em {
+  font-family: var(--data);
+}
+
+.muscle-exposure__kicker {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__header h2 {
+  margin: 5px 0 0;
+  font-size: clamp(2.1rem, 11vw, 3.5rem);
+}
+
+.muscle-exposure__stats {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.muscle-exposure__total,
+.muscle-exposure__days {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  min-height: 39px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__days {
+  background: var(--violet);
+}
+
+.muscle-exposure__total strong,
+.muscle-exposure__days strong {
+  font-size: 0.84rem;
+}
+
+.muscle-exposure__total span,
+.muscle-exposure__days span {
+  font-size: 0.55rem;
+}
+
+.muscle-exposure__intro {
+  max-width: 760px;
+  margin: 12px 0 16px;
+  color: rgba(32, 32, 31, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.muscle-exposure__empty {
+  display: grid;
+  gap: 2px;
+  margin: -4px 0 13px;
+  padding: 10px 12px;
+  border: 1px solid var(--ink);
+  border-radius: 13px;
+  background: var(--butter);
+}
+
+.muscle-exposure__empty strong {
+  font-size: 0.76rem;
+}
+
+.muscle-exposure__empty span {
+  color: rgba(32, 32, 31, 0.66);
+  font-size: 0.61rem;
+  line-height: 1.45;
+}
+
+.muscle-exposure__content {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.muscle-map {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 23px;
+  background: var(--violet);
+  color: var(--paper);
+}
+
+.muscle-map__view-labels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0 5% 2px;
+  font-size: 0.53rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.muscle-map__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 370px;
+}
+
+.muscle-map__body {
+  fill: rgba(247, 247, 242, 0.78);
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.muscle-map__region {
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: muscle-exposure-region-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.muscle-map__region.is-none,
+.muscle-map__legend i.is-none,
+.muscle-exposure__ledger li.is-none > i {
+  fill: #d7dcda;
+  background: #d7dcda;
+}
+
+.muscle-map__region.is-low,
+.muscle-map__legend i.is-low,
+.muscle-exposure__ledger li.is-low > i {
+  fill: var(--sage);
+  background: var(--sage);
+}
+
+.muscle-map__region.is-moderate,
+.muscle-map__legend i.is-moderate,
+.muscle-exposure__ledger li.is-moderate > i {
+  fill: var(--butter);
+  background: var(--butter);
+}
+
+.muscle-map__region.is-high,
+.muscle-map__legend i.is-high,
+.muscle-exposure__ledger li.is-high > i {
+  fill: var(--coral);
+  background: var(--coral);
+}
+
+.muscle-map__region .muscle-map__detail {
+  fill: none;
+  stroke: rgba(32, 32, 31, 0.65);
+  stroke-width: 1.2;
+}
+
+.muscle-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  padding-top: 3px;
+  font-size: 0.48rem;
+  text-transform: uppercase;
+}
+
+.muscle-map__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.muscle-map__legend i,
+.muscle-exposure__ledger li > i {
+  display: block;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+}
+
+.muscle-map__legend i {
+  width: 9px;
+  height: 9px;
+}
+
+.muscle-exposure__ledger {
+  min-width: 0;
+  padding: 13px;
+  border-radius: 23px;
+  background: var(--sage);
+}
+
+.muscle-exposure__ledger-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-size: 0.57rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__ledger-heading small {
+  color: rgba(32, 32, 31, 0.52);
+  font-size: 0.48rem;
+  letter-spacing: 0;
+}
+
+.muscle-exposure__ledger ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.muscle-exposure__ledger li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 53px;
+  padding: 8px;
+  border: 1px solid rgba(32, 32, 31, 0.11);
+  border-radius: 12px;
+  background: rgba(247, 247, 242, 0.62);
+}
+
+.muscle-exposure__ledger li > i {
+  width: 10px;
+  height: 10px;
+}
+
+.muscle-exposure__ledger li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.muscle-exposure__ledger li strong {
+  overflow: hidden;
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muscle-exposure__ledger li small {
+  color: rgba(32, 32, 31, 0.54);
+  font-size: 0.43rem;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__ledger li b {
+  font-size: 0.7rem;
+}
+
+.muscle-exposure__ledger li em {
+  grid-column: 2 / -1;
+  color: rgba(32, 32, 31, 0.6);
+  font-size: 0.43rem;
+  font-style: normal;
+}
+
+.muscle-exposure__method {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(32, 32, 31, 0.13);
+  color: rgba(32, 32, 31, 0.6);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.muscle-exposure__warning {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--coral) 24%, var(--paper));
+  color: rgba(32, 32, 31, 0.72);
+  font-family: var(--data);
+  font-size: 0.52rem;
+  line-height: 1.45;
+}
+
+@keyframes muscle-exposure-region-in {
+  from {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+}
+
+@media (max-width: 480px) {
+  .muscle-exposure {
+    padding: 15px 12px;
+    border-radius: 24px;
+  }
+
+  .muscle-exposure__header {
+    gap: 8px;
+  }
+
+  .muscle-exposure__kicker {
+    font-size: 0.57rem;
+  }
+
+  .muscle-exposure__header h2 {
+    margin-top: 4px;
+    font-size: clamp(1.95rem, 9.5vw, 2.35rem);
+  }
+
+  .muscle-exposure__stats {
+    gap: 4px;
+  }
+
+  .muscle-exposure__total,
+  .muscle-exposure__days {
+    min-height: 32px;
+    padding: 5px 8px;
+  }
+
+  .muscle-exposure__total strong,
+  .muscle-exposure__days strong {
+    font-size: 0.72rem;
+  }
+
+  .muscle-exposure__total span,
+  .muscle-exposure__days span {
+    font-size: 0.42rem;
+  }
+
+  .muscle-exposure__intro {
+    margin: 9px 0 11px;
+    font-size: 0.64rem;
+    line-height: 1.45;
+  }
+
+  .muscle-exposure__empty {
+    margin: -2px 0 10px;
+    padding: 8px 10px;
+  }
+
+  .muscle-exposure__empty strong {
+    font-size: 0.68rem;
+  }
+
+  .muscle-exposure__empty span {
+    font-size: 0.56rem;
+  }
+
+  .muscle-exposure__content {
+    gap: 7px;
+  }
+
+  .muscle-map,
+  .muscle-exposure__ledger {
+    border-radius: 18px;
+  }
+
+  .muscle-map {
+    padding: 10px;
+  }
+
+  .muscle-map__view-labels {
+    font-size: 0.47rem;
+  }
+
+  .muscle-map__legend {
+    gap: 5px 8px;
+    font-size: 0.42rem;
+  }
+
+  .muscle-exposure__ledger {
+    padding: 10px;
+  }
+
+  .muscle-exposure__ledger-heading {
+    margin-bottom: 7px;
+    font-size: 0.51rem;
+  }
+
+  .muscle-exposure__ledger-heading small {
+    font-size: 0.43rem;
+  }
+
+  .muscle-exposure__ledger li {
+    grid-template-columns: 9px minmax(0, 1fr) auto;
+    gap: 5px;
+    min-height: 49px;
+    padding: 7px;
+    border-radius: 10px;
+  }
+
+  .muscle-exposure__ledger li > i {
+    width: 9px;
+    height: 9px;
+  }
+
+  .muscle-exposure__ledger li strong {
+    font-size: 0.59rem;
+  }
+
+  .muscle-exposure__ledger li small,
+  .muscle-exposure__ledger li em {
+    font-size: 0.48rem;
+  }
+
+  .muscle-exposure__ledger li b {
+    font-size: 0.63rem;
+  }
+
+  .muscle-exposure__method {
+    margin-top: 9px;
+    padding-top: 8px;
+    font-size: 0.55rem;
+    line-height: 1.4;
+  }
+
+  .muscle-exposure__warning {
+    font-size: 0.48rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .muscle-exposure__ledger ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .muscle-exposure__ledger li {
+    min-height: 47px;
+  }
+}
+
+@media (min-width: 900px) {
+  .muscle-exposure {
+    padding: 25px 22px;
+  }
+
+  .muscle-exposure__intro {
+    margin-bottom: 18px;
+  }
+
+  .muscle-exposure__content {
+    grid-template-columns: minmax(350px, 0.82fr) minmax(460px, 1.18fr);
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .muscle-map,
+  .muscle-exposure__ledger {
+    min-height: 430px;
+  }
+
+  .muscle-map {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 18px;
+  }
+
+  .muscle-map__svg {
+    max-height: 390px;
+  }
+
+  .muscle-exposure__ledger {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .muscle-exposure__ledger ul {
+    align-content: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muscle-exposure,
+  .muscle-exposure *,
+  .muscle-exposure *::before,
+  .muscle-exposure *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

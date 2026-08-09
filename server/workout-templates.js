@@ -1,4 +1,5 @@
 import { sessions } from "../src/data.js";
+import { getExerciseMuscleExposure } from "../src/exerciseMuscles.js";
 import { guideForExercise } from "../src/exerciseLibrary.js";
 import { AppError } from "./errors.js";
 
@@ -8,12 +9,23 @@ function clone(value) {
 
 function normalizeTemplate(template) {
   return {
-    schemaVersion: 1,
     ...clone(template),
-    exercises: template.exercises.map((exercise) => ({
-      ...clone(exercise),
-      variantOptions: guideForExercise(exercise).variants.map((variant) => variant.id),
-    })),
+    schemaVersion: 2,
+    exercises: template.exercises.map((exercise) => {
+      const muscleExposure = getExerciseMuscleExposure(exercise.id);
+      if (!muscleExposure) {
+        throw new AppError(
+          "template_muscle_exposure_missing",
+          `Exercise ${exercise.id} does not have muscle-exposure metadata.`,
+          500,
+        );
+      }
+      return {
+        ...clone(exercise),
+        variantOptions: guideForExercise(exercise).variants.map((variant) => variant.id),
+        muscleExposure: clone(muscleExposure),
+      };
+    }),
   };
 }
 

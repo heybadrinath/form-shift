@@ -20,6 +20,15 @@ test("workout history reports times and completed, skipped, and set counts", () 
       exerciseId: "a-one",
       position: 0,
       expectedSets: 2,
+      exerciseSnapshot: {
+        id: "a-one",
+        muscleExposure: {
+          category: "resistance",
+          primary: ["chest"],
+          secondary: ["triceps"],
+          internalNote: "not returned in history",
+        },
+      },
       status: "completed",
       selectedVariant: "machine",
       variantSelectedAt: startedAt,
@@ -31,6 +40,7 @@ test("workout history reports times and completed, skipped, and set counts", () 
       exerciseId: "a-two",
       position: 1,
       expectedSets: 2,
+      exerciseSnapshot: { id: "a-two" },
       status: "skipped",
       selectedVariant: null,
       variantSelectedAt: null,
@@ -67,4 +77,10 @@ test("workout history reports times and completed, skipped, and set counts", () 
   );
   assert.equal(history[0].exercises[1].completedAt, null);
   assert.equal(history[0].exercises[1].skippedAt, endedAt);
+  assert.deepEqual(history[0].exercises[0].muscleExposure, {
+    category: "resistance",
+    primary: ["chest"],
+    secondary: ["triceps"],
+  });
+  assert.equal(history[0].exercises[1].muscleExposure, null);
 });

@@ -4,7 +4,7 @@
 
 **Passed on 2026-08-09.**
 
-A fresh authenticated browser pass covered the current desktop and mobile interface, owner unlock, persistent workout lifecycle, training history, weight editing, food interactions, and database cleanup. No unresolved release-blocking visual or functional issue remained at the end of the pass.
+A fresh authenticated browser pass covered the current desktop and mobile interface, owner unlock, persistent workout lifecycle, training history, weight editing, food interactions, seeded review data, and weekly muscle exposure. No unresolved release-blocking visual or functional issue remained at the end of the pass.
 
 ## Reference captures
 
@@ -59,8 +59,10 @@ The current interface was checked at 390 × 844 across the runner, food index, C
 
 - Calendar displayed workouts on their logical days, summarized the current month, visualized weekly activity, returned to the current month, and opened a selected day's session details.
 - Analytics reflected the saved session in weekly frequency, duration, completion, session mix, and recent history.
+- The weekly muscle panel mapped completed resistance/core sets to 12 major regions, kept direct and supporting counts visible beside the body colors, and excluded cardio blocks.
+- Snapshot metadata was preferred for new history while the stable exercise-ID fallback populated older and seeded records. Unknown completed work remains visible as an unclassified warning rather than disappearing.
 - A weight entry could be added and then edited, with the revised value retained after refresh.
-- The Analytics page stayed within both 390 px and 320 px viewports after the density pass; summary cards, labels, bars, the weight form, and recent history no longer force page-level horizontal expansion.
+- The Analytics page stayed within 390 px, 360 px, and 320 px viewports after the density pass; summary cards, the body map, region ledger, labels, bars, the weight form, and recent history no longer force page-level horizontal expansion. At 360 px and below, the muscle ledger changes to one readable column.
 
 ### Interaction feedback
 
@@ -108,11 +110,11 @@ npm test
 npm run build
 ```
 
-The automated suites cover single-flight action locking, Calendar metrics, seed-data relationships, history calculations, signed-cookie authentication, the 04:00 `Asia/Kolkata` logical-day boundary, session invariants, skip/completion timestamps, workout-history shaping, template variants, schema safeguards, protected API mutations, and static-hosting packaging. The production build verifies the client bundle and expected packaging outputs.
+The automated suites cover single-flight action locking, Calendar metrics, weekly muscle exposure and snapshot fallback, seed-data relationships, history calculations, signed-cookie authentication, the 04:00 `Asia/Kolkata` logical-day boundary, session invariants, skip/completion timestamps, workout-history shaping, template variants, schema safeguards, protected API mutations, and static-hosting packaging. The production build verifies the client bundle and expected packaging outputs.
 
 Verification rerun on 2026-08-09:
 
-- `npm test` — passed, 41 tests.
+- `npm test` — passed, 47 tests.
 - `npm run build` — passed.
 
 final result: passed

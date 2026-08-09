@@ -35,7 +35,7 @@ Statuses are `active`, `completed`, and `incomplete`. Database checks keep statu
 
 ### `workout_exercises`
 
-Stores an exercise snapshot, position, expected set count, selected variant and selection timestamp, status, and either a completion or skip timestamp.
+Stores an exercise snapshot, position, expected set count, selected variant and selection timestamp, status, and either a completion or skip timestamp. Version 2 snapshots also preserve the exercise's resistance/cardio category and primary/supporting muscle regions.
 
 Statuses are `pending`, `completed`, and `skipped`. A database check prevents an exercise from retaining both `completedAt` and `skippedAt`.
 
@@ -63,10 +63,10 @@ Application checks provide readable errors, while database indexes and checks re
 
 1. The owner unlocks the app.
 2. `GET /api/bootstrap` returns templates, logical-day state, an active session if present, up to 120 ended sessions, and the 30 most recent weight entries.
-3. Starting a workout snapshots the chosen template and its exercises, creates all expected set rows, and records the initial variant selections.
+3. Starting a workout snapshots the chosen template and its exercises—including muscle-exposure metadata—creates all expected set rows, and records the initial variant selections.
 4. Set, variant, and skip changes are written immediately. Reloading or closing the browser does not discard them.
 5. The session can be completed after all exercises are completed or skipped, or explicitly ended as incomplete.
-6. Calendar and Analytics derive their display data from the returned session history. The active workout is excluded from history until it ends.
+6. Calendar and Analytics derive their display data from the returned session history. The active workout is excluded from history until it ends. Weekly muscle exposure counts persisted completed resistance/core sets, excludes cardio, and uses stable-ID fallback metadata for older snapshots.
 
 The food quick-compare tray is client-only by design and clears on reload. It is not part of this persistence model.
 
@@ -97,7 +97,7 @@ The authenticated bootstrap payload contains:
 }
 ```
 
-`sessionHistory` entries include session status, logical day, start/end/completion timestamps, duration, completed/skipped/handled counts, completion percentage, and per-exercise set counts and status.
+`sessionHistory` entries include session status, logical day, start/end/completion timestamps, duration, completed/skipped/handled counts, completion percentage, and per-exercise set counts, status, and sanitized muscle-exposure metadata when present.
 
 ### Workouts
 
@@ -144,4 +144,4 @@ Run the backend-focused suite with:
 npm run test:backend
 ```
 
-The suite covers authentication, cookie signing and expiry, logical-day boundaries, session finish/skip invariants, history shaping, template variant IDs, migration safeguards, and unauthenticated mutation rejection.
+The suite covers authentication, cookie signing and expiry, logical-day boundaries, session finish/skip invariants, history shaping, snapshot muscle metadata, weekly exposure classification, template variant IDs, migration safeguards, and unauthenticated mutation rejection.

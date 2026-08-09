@@ -19,6 +19,10 @@ test("sample data is deterministic, relationally complete, and stays before its 
   assert.ok(seed.sessions.some((session) => session.status === "incomplete"));
   assert.ok(seed.sessions.some((session) => session.templateId === "D"));
   assert.ok(seed.sessions.some((session) => session.templateId === "E"));
+  assert.ok(seed.sessions.every((session) => session.templateSnapshot.schemaVersion === 2));
+  assert.ok(seed.sessions.every((session) => (
+    session.templateSnapshot.exercises.every((exercise) => exercise.muscleExposure)
+  )));
 
   const sessionIds = new Set(seed.sessions.map((session) => session.id));
   assert.ok(seed.exercises.every((exercise) => sessionIds.has(exercise.sessionId)));

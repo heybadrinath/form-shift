@@ -12,6 +12,7 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 - Records individual set completion, exercise completion, exercise skips, variant choices, session start/end times, and incomplete sessions.
 - Keeps one active workout resumable after reload or browser closure.
 - Shows a calendar and analytics view derived from saved workout history.
+- Maps the current week's completed resistance and core sets across 12 front/back body regions, with direct work, supporting work, and training-day counts shown separately.
 - Stores occasional body-weight measurements and supports adding or editing entries from Analytics.
 - Includes a searchable food index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit.
 - Compares up to four food portions against rough energy and protein references without turning the comparison into a prescribed meal plan.
@@ -51,7 +52,7 @@ Postgres enforces the two most important workout rules:
 - Only one workout can be active for the owner at a time.
 - Only one workout can be started in a logical training day, where the day changes at 04:00 in `Asia/Kolkata`.
 
-Workout templates and exercise definitions are snapshotted when a session starts, so historical records remain meaningful if the source program changes later.
+Workout templates, exercise definitions, equipment variants, and muscle-exposure classifications are snapshotted when a session starts, so historical records remain meaningful if the source program changes later. Older records without exposure metadata use a tested stable-ID fallback.
 
 ## Local setup
 
@@ -120,7 +121,7 @@ Run the complete automated test suite:
 npm test
 ```
 
-The test command covers action single-flight behavior, Calendar metrics, deterministic seed relationships, history calculations, authentication and signed cookies, the 04:00 logical-day boundary, workout invariants, workout-history shaping, template variants, schema safeguards, API authentication, and static-hosting packaging.
+The test command covers action single-flight behavior, Calendar metrics, weekly muscle-exposure classification, deterministic seed relationships, history calculations, authentication and signed cookies, the 04:00 logical-day boundary, workout invariants, workout-history shaping, template variants, schema safeguards, API authentication, and static-hosting packaging.
 
 Build the production assets with:
 
@@ -140,6 +141,7 @@ server/api/          Shared HTTP handlers
 server/db/           Drizzle schema, connection, and repository
 server/domain/       Session invariants and history shaping
 src/components/      Workout, food, calendar, analytics, and owner-gate UI
+src/exerciseMuscles.js  Canonical exercise-to-muscle exposure metadata
 tests/               Node test suites
 ```
 
@@ -148,6 +150,7 @@ tests/               Node test suites
 - Authentication is a single-owner PIN, not a multi-user account system.
 - The workout journal, workout history, and weight entries are persistent. The food quick-compare tray is intentionally temporary and clears on reload.
 - The runner shows overall elapsed session time and written rest guidance. It does not run a rest countdown.
+- Muscle exposure is a completed-set distribution, not load-based training volume, recovery advice, or evidence of muscle growth.
 - Food energy and protein values are approximate references, not a personalized daily prescription.
 - Exercise illustrations support the written cues; they are not a substitute for a qualified coach or clinical assessment when pain or injury symptoms are present.
 

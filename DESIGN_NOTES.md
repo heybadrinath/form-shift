@@ -13,7 +13,7 @@ The four primary destinations are:
 1. **Workouts** — session selection, the rolling A–E system, exercise preview, and safety guardrails.
 2. **Food** — searchable food categories, detail views, rough portion coverage, and a temporary comparison tray.
 3. **Calendar** — logical-day training history and the detail of completed or incomplete sessions.
-4. **Analytics** — weekly frequency, recorded duration, completion, session mix, recent history, and weight entries.
+4. **Analytics** — weekly frequency, recorded duration, completion, muscle exposure, session mix, recent history, and weight entries.
 
 The Guide is contextual rather than a fifth primary destination. An active workout appears as a persistent continuation action outside the runner.
 
@@ -78,6 +78,8 @@ The images are instructional aids, not ground truth. Written cues remain authori
 - Progress treats both completed and explicitly skipped exercises as handled, while the summary preserves the difference.
 - Session and exercise timestamps are recorded in the background; the interface emphasizes the task rather than audit metadata.
 - Calendar and Analytics report only persisted outcomes. They do not infer load progression or repetitions that were never recorded.
+- The front/back muscle map colors 12 major regions from completed sets in ended workouts. Direct sets count once and supporting involvement counts half for the relative color score; the adjacent ledger preserves the raw direct, supporting, and training-day counts.
+- Muscle exposure is deliberately not labelled training volume, balance, stimulus, readiness, recovery, or growth. The active workout enters the map only after it is finished or ended.
 - Food estimates use ranges and state that the percentages are an orientation, not an instruction to compensate later.
 
 ## Accessibility and motion

@@ -4,6 +4,18 @@ function milliseconds(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function muscleExposureFromSnapshot(exerciseSnapshot) {
+  const exposure = exerciseSnapshot?.muscleExposure;
+  if (!exposure || typeof exposure !== "object") return null;
+  if (!Array.isArray(exposure.primary) || !Array.isArray(exposure.secondary)) return null;
+  if (!["resistance", "cardio"].includes(exposure.category)) return null;
+  return {
+    category: exposure.category,
+    primary: [...exposure.primary],
+    secondary: [...exposure.secondary],
+  };
+}
+
 export function buildWorkoutHistory(sessionRows, exerciseRows, setRows) {
   const setsByExercise = new Map();
   for (const set of setRows) {
@@ -30,6 +42,7 @@ export function buildWorkoutHistory(sessionRows, exerciseRows, setRows) {
       selectedVariant: exercise.selectedVariant,
       selectedVariantId: exercise.selectedVariant,
       variantSelectedAt: exercise.variantSelectedAt,
+      muscleExposure: muscleExposureFromSnapshot(exercise.exerciseSnapshot),
       completedAt: exercise.completedAt,
       skippedAt: exercise.skippedAt,
     });

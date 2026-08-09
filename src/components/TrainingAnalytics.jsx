@@ -24,6 +24,8 @@ import {
   toLocalDateKey,
 } from "./historyUtils.js";
 import { InlineSpinner } from "./InlineSpinner.jsx";
+import { MuscleExposurePanel } from "./MuscleExposurePanel.jsx";
+import { summarizeWeeklyMuscleExposure } from "./muscleExposure.js";
 import "./TrainingAnalytics.css";
 
 function formatDuration(minutes) {
@@ -74,6 +76,10 @@ export function TrainingAnalytics({
 
   const summary = useMemo(
     () => summarizeTraining(sessionHistory, new Date(), logicalDayCutoffHour),
+    [sessionHistory, logicalDayCutoffHour],
+  );
+  const muscleExposure = useMemo(
+    () => summarizeWeeklyMuscleExposure(sessionHistory, new Date(), logicalDayCutoffHour),
     [sessionHistory, logicalDayCutoffHour],
   );
   const weights = useMemo(
@@ -192,6 +198,8 @@ export function TrainingAnalytics({
           <small>this week's sessions</small>
         </article>
       </section>
+
+      <MuscleExposurePanel exposure={muscleExposure} />
 
       <div className="training-analytics-mosaic">
         <section className="training-analytics-panel training-analytics-weight-panel" aria-labelledby="weight-trend-title">
