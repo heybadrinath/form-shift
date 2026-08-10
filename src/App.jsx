@@ -15,9 +15,12 @@ import { guideForExercise } from "./exerciseLibrary.js";
 import { sessions } from "./data.js";
 import { nextChennaiWorkoutBoundaryMs } from "./dailyAccess.js";
 import {
+  mutationSuccessTone,
   mutationStatusLabel,
   playInterfaceTone,
+  primeInterfaceAudio,
   readSoundPreference,
+  resetInterfaceAudioAfterBackground,
   writeSoundPreference,
 } from "./interfaceFeedback.js";
 import {
@@ -85,6 +88,7 @@ export function App() {
   const mutationLockRef = useRef(null);
   const noticeTimerRef = useRef(null);
   const transitionRequestRef = useRef(0);
+  const soundEnabledRef = useRef(soundEnabled);
 
   const transitionTo = useCallback((nextPage) => {
     const requestId = transitionRequestRef.current + 1;
@@ -178,21 +182,56 @@ export function App() {
   }, [authState, transitionTo]);
 
   useEffect(() => {
+    function eligibleControl(target) {
+      const control = target.closest?.("button:not(:disabled), a[href]");
+      if (!control || control.dataset.sound === "off") return null;
+      return control;
+    }
+
+    function handleInterfaceIntent(event) {
+      if (!eligibleControl(event.target)) return;
+      primeInterfaceAudio(soundEnabled);
+    }
+
+    function handleInterfaceKeydown(event) {
+      if (event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+      handleInterfaceIntent(event);
+    }
+
     function handleInterfaceClick(event) {
-      const control = event.target.closest?.("button:not(:disabled), a[href]");
-      if (!control || control.dataset.sound === "off") return;
+      const control = eligibleControl(event.target);
+      if (!control) return;
       playInterfaceTone(control.dataset.sound || "tap", soundEnabled);
     }
 
+    document.addEventListener("pointerdown", handleInterfaceIntent, true);
+    document.addEventListener("keydown", handleInterfaceKeydown, true);
     document.addEventListener("click", handleInterfaceClick, true);
-    return () => document.removeEventListener("click", handleInterfaceClick, true);
+    return () => {
+      document.removeEventListener("pointerdown", handleInterfaceIntent, true);
+      document.removeEventListener("keydown", handleInterfaceKeydown, true);
+      document.removeEventListener("click", handleInterfaceClick, true);
+    };
   }, [soundEnabled]);
+
+  useEffect(() => {
+    function handleAudioBackgrounding() {
+      if (document.visibilityState !== "visible") resetInterfaceAudioAfterBackground();
+    }
+
+    document.addEventListener("visibilitychange", handleAudioBackgrounding);
+    window.addEventListener("pagehide", resetInterfaceAudioAfterBackground);
+    return () => {
+      document.removeEventListener("visibilitychange", handleAudioBackgrounding);
+      window.removeEventListener("pagehide", resetInterfaceAudioAfterBackground);
+    };
+  }, []);
 
   useEffect(() => () => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
   }, []);
 
-  async function runMutation(key, action) {
+  async function runMutation(key, action, { playSuccessSound = true } = {}) {
     const ticket = startSingleFlight(mutationLockRef, key, async () => {
       setMutationKey(key);
       setError("");
@@ -200,7 +239,9 @@ export function App() {
       try {
         const result = await action();
         showSyncNotice("saved", "Saved to your journal", 1500);
-        playInterfaceTone("saved", soundEnabled);
+        if (playSuccessSound) {
+          playInterfaceTone(mutationSuccessTone(key), soundEnabledRef.current);
+        }
         return result;
       } catch (mutationError) {
         if (mutationError instanceof ApiError && mutationError.status === 401) {
@@ -209,7 +250,7 @@ export function App() {
         }
         setError(readableError(mutationError));
         showSyncNotice("error", "Could not save. Try again.", 3200);
-        playInterfaceTone("error", soundEnabled);
+        playInterfaceTone("error", soundEnabledRef.current);
         throw mutationError;
       } finally {
         setMutationKey(null);
@@ -262,9 +303,15 @@ export function App() {
 
   function toggleSound() {
     const nextEnabled = !soundEnabled;
+    soundEnabledRef.current = nextEnabled;
     setSoundEnabled(nextEnabled);
     writeSoundPreference(nextEnabled);
-    if (nextEnabled) playInterfaceTone("saved", true);
+    if (nextEnabled) {
+      primeInterfaceAudio(true).then(() => playInterfaceTone("unlock", true));
+      showSyncNotice("saved", "Interface sounds on", 1500);
+    } else {
+      showSyncNotice("saved", "Interface sounds muted", 1500);
+    }
   }
 
   async function startSession(templateId) {
@@ -358,12 +405,14 @@ export function App() {
           }
         }
         transitionTo("analytics");
-      });
+      }, { playSuccessSound: false });
       if (!started) return false;
       if (weightSaveError) {
         setError("The workout was saved, but the weight entry was not. Add it again from Analytics.");
         showSyncNotice("error", "Workout saved · weight needs retry", 4600);
-        playInterfaceTone("error", soundEnabled);
+        playInterfaceTone("partial", soundEnabledRef.current);
+      } else {
+        playInterfaceTone("complete", soundEnabledRef.current);
       }
       return true;
     } catch {
