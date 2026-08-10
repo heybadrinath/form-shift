@@ -491,6 +491,22 @@ html[data-page-motion="return"].is-fallback-page-transition .page-enter {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 979px) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .page-transition-layer {
+    view-transition-name: none;
+  }
+
+  html.is-fallback-page-transition .page-enter,
+  ::view-transition-old(page-content),
+  ::view-transition-new(page-content) {
+    animation: none;
+  }
+}
+
 @keyframes nav-active-land {
   0% { transform: scale(0.88); }
   65% { transform: scale(1.08); }

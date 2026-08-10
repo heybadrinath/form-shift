@@ -16,3 +16,6 @@ export function pageMotionMode(currentPage, nextPage) {
   return nextIndex > currentIndex ? "forward" : "back";
 }
 
+export function shouldAnimatePageTransition({ desktopLayout, reducedMotion }) {
+  return desktopLayout === true && reducedMotion !== true;
+}

@@ -14,7 +14,7 @@ import { WorkoutHub } from "./components/WorkoutHub.jsx";
 import { guideForExercise } from "./exerciseLibrary.js";
 import { sessions } from "./data.js";
 import { nextChennaiWorkoutBoundaryMs } from "./dailyAccess.js";
-import { pageMotionMode } from "./navigationMotion.js";
+import { pageMotionMode, shouldAnimatePageTransition } from "./navigationMotion.js";
 import {
   mutationSuccessTone,
   mutationStatusLabel,
@@ -131,8 +131,6 @@ export function App() {
       return;
     }
 
-    const motionMode = pageMotionMode(pageRef.current, nextPage);
-    root.dataset.pageMotion = motionMode;
     const commit = () => {
       if (transitionRequestRef.current !== requestId) return;
       flushSync(() => {
@@ -147,8 +145,17 @@ export function App() {
         window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       });
     };
-    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (!reduceMotion && typeof document.startViewTransition === "function") {
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    const desktopLayout = window.matchMedia?.("(min-width: 980px)").matches === true;
+    if (!shouldAnimatePageTransition({ desktopLayout, reducedMotion })) {
+      clearMotionState();
+      commit();
+      return;
+    }
+
+    const motionMode = pageMotionMode(pageRef.current, nextPage);
+    root.dataset.pageMotion = motionMode;
+    if (typeof document.startViewTransition === "function") {
       root.classList.add("is-native-page-transition");
       try {
         const transition = document.startViewTransition(commit);
@@ -167,7 +174,7 @@ export function App() {
 
     root.classList.add("is-fallback-page-transition");
     commit();
-    motionCleanupTimerRef.current = window.setTimeout(clearMotionState, reduceMotion ? 0 : 260);
+    motionCleanupTimerRef.current = window.setTimeout(clearMotionState, 260);
   }, []);
 
   const showSyncNotice = useCallback((status, message, holdMs = null, detail = null) => {
