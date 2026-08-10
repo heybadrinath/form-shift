@@ -37,15 +37,29 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
+  overflow-x: clip;
   background: #cbd9d0;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 body:has(.modal-backdrop),
@@ -150,21 +164,32 @@ a {
 }
 
 .site-stage {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
   padding: 0;
 }
 
 .app-shell {
   position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
   background: var(--ink);
 }
 
 .app-main {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .page-canvas {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: calc(100vh - 68px);
   padding: 12px 12px 104px;
   overflow: clip;

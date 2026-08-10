@@ -96,9 +96,25 @@ export function App() {
   const pageRef = useRef(page);
   const soundEnabledRef = useRef(soundEnabled);
 
+  useEffect(() => {
+    const resetHorizontalPosition = () => {
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+      window.scrollTo({ top: window.scrollY, left: 0, behavior: "auto" });
+    };
+
+    resetHorizontalPosition();
+    window.addEventListener("pageshow", resetHorizontalPosition);
+    return () => window.removeEventListener("pageshow", resetHorizontalPosition);
+  }, []);
+
   const transitionTo = useCallback((nextPage) => {
     const requestId = transitionRequestRef.current + 1;
     transitionRequestRef.current = requestId;
+    const focusedElement = document.activeElement;
+    if (focusedElement?.matches?.("input, select, textarea, [contenteditable='true']")) {
+      focusedElement.blur();
+    }
     activeViewTransitionRef.current?.skipTransition?.();
     activeViewTransitionRef.current = null;
     if (motionCleanupTimerRef.current) window.clearTimeout(motionCleanupTimerRef.current);
@@ -124,6 +140,12 @@ export function App() {
         setPage(nextPage);
       });
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.requestAnimationFrame(() => {
+        if (transitionRequestRef.current !== requestId) return;
+        document.documentElement.scrollLeft = 0;
+        document.body.scrollLeft = 0;
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      });
     };
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion && typeof document.startViewTransition === "function") {

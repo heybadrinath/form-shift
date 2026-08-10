@@ -39,10 +39,86 @@ test("tone patterns are deterministic and unknown tones use a tap", () => {
 test("fallback tones render valid bounded audio and WAV data", () => {
   for (const kind of ["tap", "navigate", "set", "saved", "complete", "unlock", "partial", "error"]) {
     const samples = renderToneSamples(kind);
+    const peak = samples.reduce((highest, sample) => Math.max(highest, Math.abs(sample)), 0);
+    const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample ** 2, 0) / samples.length);
     assert.ok(samples.length > 500);
     assert.ok(samples.every((sample) => Number.isFinite(sample) && Math.abs(sample) <= 1));
-    assert.ok(samples.some((sample) => Math.abs(sample) > 0.08));
+    assert.ok(peak >= 0.22 && peak <= 0.45);
+    assert.ok(rms >= 0.06 && rms <= 0.11);
+    assert.ok(samples.every((sample) => Math.abs(sample) < 0.99));
     assert.match(interfaceToneDataUri(kind), /^data:audio\/wav;base64,UklGR/);
+  }
+});
+
+test("rapid taps do not stack louder interface tones", async () => {
+  const previousWindow = globalThis.window;
+  let playCalls = 0;
+
+  class AudioFallback {
+    pause() {}
+
+    play() {
+      playCalls += 1;
+      return Promise.resolve();
+    }
+  }
+
+  globalThis.window = { Audio: AudioFallback };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?tap-cooldown=${Date.now()}`);
+    assert.equal(feedback.playInterfaceTone("tap"), true);
+    assert.equal(feedback.playInterfaceTone("tap"), false);
+    assert.equal(playCalls, 1);
+    await new Promise((resolve) => setTimeout(resolve, 55));
+    assert.equal(feedback.playInterfaceTone("tap"), true);
+    assert.equal(playCalls, 2);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("Web Audio uses the same audible output gain", async () => {
+  const previousWindow = globalThis.window;
+  const gainTargets = [];
+
+  class RunningAudioContext {
+    constructor() {
+      this.state = "running";
+      this.currentTime = 0;
+      this.destination = {};
+    }
+
+    createOscillator() {
+      return {
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+        start() {},
+        stop() {},
+      };
+    }
+
+    createGain() {
+      return {
+        gain: {
+          setValueAtTime() {},
+          exponentialRampToValueAtTime(value) { gainTargets.push(value); },
+        },
+        connect() {},
+        disconnect() {},
+      };
+    }
+  }
+
+  globalThis.window = { AudioContext: RunningAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?web-audio-gain=${Date.now()}`);
+    assert.equal(feedback.playInterfaceTone("tap"), true);
+    assert.equal(Math.max(...gainTargets), 0.51);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
   }
 });
 

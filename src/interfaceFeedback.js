@@ -1,8 +1,9 @@
 const STORAGE_KEY = "form-shift:sound-enabled";
 const FALLBACK_SAMPLE_RATE = 24_000;
 const FALLBACK_MASTER_GAIN = 0.92;
-const TONE_OUTPUT_GAIN = 2.4;
+const TONE_OUTPUT_GAIN = 6;
 const AUDIO_RESUME_TIMEOUT_MS = 250;
+const TAP_COOLDOWN_MS = 50;
 
 const tonePatterns = Object.freeze({
   tap: Object.freeze([
@@ -334,7 +335,7 @@ export function playInterfaceTone(kind, enabled = true) {
   if (!enabled) return false;
   if (kind === "tap") {
     const now = Date.now();
-    if (now - lastTapAt < 24) return false;
+    if (now - lastTapAt < TAP_COOLDOWN_MS) return false;
     lastTapAt = now;
   }
   const context = getAudioContext();
