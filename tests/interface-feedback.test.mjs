@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  configurePlaybackAudioSession,
   hapticPattern,
   interfaceToneDataUri,
   mutationSuccessHaptic,
   mutationSuccessTone,
   mutationStatusLabel,
   parseSoundPreference,
+  prefersMediaElementPlayback,
   readSoundPreference,
   renderToneSamples,
   tonePattern,
@@ -35,18 +37,78 @@ test("sound preference survives a storage round trip", () => {
 test("tone patterns are deterministic and unknown tones use a tap", () => {
   assert.equal(tonePattern("saved").length, 2);
   assert.equal(tonePattern("complete").length, 3);
+  assert.equal(tonePattern("test").length, 3);
   assert.deepEqual(tonePattern("unknown"), tonePattern("tap"));
 });
 
-test("fallback tones render valid bounded audio and WAV data", () => {
-  for (const kind of ["tap", "navigate", "set", "saved", "complete", "unlock", "partial", "error"]) {
+test("supported Apple audio sessions use the media playback route", () => {
+  const audioSession = { type: "ambient" };
+  assert.equal(configurePlaybackAudioSession({ audioSession }), true);
+  assert.equal(audioSession.type, "playback");
+
+  const blockedSession = {};
+  Object.defineProperty(blockedSession, "type", {
+    get: () => "ambient",
+    set: () => { throw new Error("blocked"); },
+  });
+  const blockedAppleNavigator = {
+    audioSession: blockedSession,
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+  };
+  assert.equal(configurePlaybackAudioSession(blockedAppleNavigator), false);
+  assert.equal(prefersMediaElementPlayback(blockedAppleNavigator), true);
+  assert.equal(configurePlaybackAudioSession({}), false);
+});
+
+test("older Apple mobile browsers prefer the HTML media route", () => {
+  assert.equal(prefersMediaElementPlayback({
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X)",
+  }), true);
+  assert.equal(prefersMediaElementPlayback({
+    platform: "MacIntel",
+    maxTouchPoints: 5,
+    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X)",
+  }), true);
+  assert.equal(prefersMediaElementPlayback({
+    audioSession: { type: "ambient" },
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+  }), true);
+  assert.equal(prefersMediaElementPlayback({
+    audioSession: { type: "playback" },
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
+  }), false);
+  assert.equal(prefersMediaElementPlayback({
+    userAgent: "Mozilla/5.0 (Linux; Android 15)",
+  }), false);
+});
+
+test("fallback tones render sustained near-full-scale audio and valid WAV data", () => {
+  const minimumDurationMs = {
+    tap: 150,
+    navigate: 215,
+    set: 255,
+    saved: 310,
+    complete: 500,
+    unlock: 450,
+    partial: 360,
+    error: 380,
+    test: 840,
+  };
+
+  for (const kind of ["tap", "navigate", "set", "saved", "complete", "unlock", "partial", "error", "test"]) {
     const samples = renderToneSamples(kind);
     const peak = samples.reduce((highest, sample) => Math.max(highest, Math.abs(sample)), 0);
     const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample ** 2, 0) / samples.length);
-    assert.ok(samples.length > 500);
+    const durationMs = samples.length / 24_000 * 1_000;
+    const presenceFrequency = Math.max(...tonePattern(kind).map((note) => (
+      Math.max(note.frequency, note.frequencyEnd ?? note.frequency)
+    )));
+
+    assert.ok(durationMs >= minimumDurationMs[kind]);
+    assert.ok(presenceFrequency >= 1_050);
     assert.ok(samples.every((sample) => Number.isFinite(sample) && Math.abs(sample) <= 1));
-    assert.ok(peak >= 0.37 && peak <= 0.68);
-    assert.ok(rms >= 0.10 && rms <= 0.18);
+    assert.ok(peak >= 0.955 && peak <= 0.965);
+    assert.ok(rms >= 0.42 && rms <= 0.6);
     assert.ok(samples.every((sample) => Math.abs(sample) < 0.99));
     assert.match(interfaceToneDataUri(kind), /^data:audio\/wav;base64,UklGR/);
   }
@@ -80,9 +142,10 @@ test("rapid taps do not stack louder interface tones", async () => {
   }
 });
 
-test("Web Audio uses the same audible output gain", async () => {
+test("Web Audio normalizes the voice while keeping the master below full scale", async () => {
   const previousWindow = globalThis.window;
   const gainTargets = [];
+  const gainSetValues = [];
 
   class RunningAudioContext {
     constructor() {
@@ -104,7 +167,7 @@ test("Web Audio uses the same audible output gain", async () => {
     createGain() {
       return {
         gain: {
-          setValueAtTime() {},
+          setValueAtTime(value) { gainSetValues.push(value); },
           exponentialRampToValueAtTime(value) { gainTargets.push(value); },
         },
         connect() {},
@@ -117,7 +180,76 @@ test("Web Audio uses the same audible output gain", async () => {
   try {
     const feedback = await import(`../src/interfaceFeedback.js?web-audio-gain=${Date.now()}`);
     assert.equal(feedback.playInterfaceTone("tap"), true);
-    assert.ok(Math.abs(Math.max(...gainTargets) - 0.85) < Number.EPSILON * 2);
+    assert.ok(Math.abs(Math.max(...gainTargets) - 1) < Number.EPSILON * 2);
+    assert.ok(gainSetValues.includes(0.98));
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("Web Audio configures a near-ceiling peak limiter when the browser supports it", async () => {
+  const previousWindow = globalThis.window;
+  const limiterSettings = new Map();
+  let limiterConnections = 0;
+
+  const audioParam = (name) => ({
+    setValueAtTime(value) { limiterSettings.set(name, value); },
+  });
+
+  class LimitedAudioContext {
+    constructor() {
+      this.state = "running";
+      this.currentTime = 0;
+      this.destination = {};
+    }
+
+    createDynamicsCompressor() {
+      return {
+        threshold: audioParam("threshold"),
+        knee: audioParam("knee"),
+        ratio: audioParam("ratio"),
+        attack: audioParam("attack"),
+        release: audioParam("release"),
+        connect() { limiterConnections += 1; },
+        disconnect() {},
+      };
+    }
+
+    createOscillator() {
+      return {
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+        start() {},
+        stop() {},
+      };
+    }
+
+    createGain() {
+      return {
+        gain: {
+          setValueAtTime() {},
+          linearRampToValueAtTime() {},
+        },
+        connect() {},
+        disconnect() {},
+      };
+    }
+  }
+
+  globalThis.window = { AudioContext: LimitedAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?web-audio-limiter=${Date.now()}`);
+    assert.equal(feedback.playInterfaceTone("set"), true);
+    assert.equal(limiterConnections, 1);
+    assert.deepEqual(Object.fromEntries(limiterSettings), {
+      threshold: -0.5,
+      knee: 0,
+      ratio: 20,
+      attack: 0.001,
+      release: 0.06,
+    });
   } finally {
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;
@@ -229,9 +361,62 @@ test("a partially scheduled Web Audio tone is stopped before fallback playback",
   try {
     const feedback = await import(`../src/interfaceFeedback.js?web-audio-partial=${Date.now()}`);
     assert.equal(feedback.playInterfaceTone("saved"), true);
-    assert.deepEqual(stopCalls, [0.11, 0]);
+    assert.ok(Math.abs(stopCalls[0] - 0.19) < 0.000_001);
+    assert.equal(stopCalls[1], 0);
     assert.equal(outputDisconnects, 1);
     assert.equal(fallbackPlays, 1);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("a partially supported limiter degrades to the bounded Web Audio mix", async () => {
+  const previousWindow = globalThis.window;
+  let oscillatorStarts = 0;
+  let fallbackPlays = 0;
+
+  class PartialAudioContext {
+    constructor() {
+      this.state = "running";
+      this.currentTime = 0;
+      this.destination = {};
+    }
+
+    createDynamicsCompressor() {
+      throw new Error("limiter unavailable");
+    }
+
+    createOscillator() {
+      return {
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+        start() { oscillatorStarts += 1; },
+        stop() {},
+      };
+    }
+
+    createGain() {
+      return {
+        gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+      };
+    }
+  }
+
+  class FallbackAudio {
+    pause() {}
+    play() { fallbackPlays += 1; return Promise.resolve(); }
+  }
+
+  globalThis.window = { Audio: FallbackAudio, AudioContext: PartialAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?partial-limiter=${Date.now()}`);
+    assert.equal(feedback.playInterfaceTone("saved"), true);
+    assert.equal(oscillatorStarts, 2);
+    assert.equal(fallbackPlays, 0);
   } finally {
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;
@@ -501,6 +686,129 @@ test("HTML audio provides a safe fallback when Web Audio is unavailable", async 
     const feedback = await import(`../src/interfaceFeedback.js?fallback=${Date.now()}`);
     assert.equal(feedback.playInterfaceTone("complete"), true);
     assert.equal(playCalls, 1);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("the loud diagnostic reports accepted and blocked media playback", async () => {
+  const previousWindow = globalThis.window;
+
+  class AcceptedAudio {
+    pause() {}
+    play() { return Promise.resolve(); }
+  }
+
+  class BlockedAudio {
+    pause() {}
+    play() { return Promise.reject(new Error("not allowed")); }
+  }
+
+  try {
+    globalThis.window = { Audio: AcceptedAudio };
+    const acceptedFeedback = await import(`../src/interfaceFeedback.js?test-accepted=${Date.now()}`);
+    assert.equal(await acceptedFeedback.playInterfaceTestTone(), true);
+
+    globalThis.window = { Audio: BlockedAudio };
+    const blockedFeedback = await import(`../src/interfaceFeedback.js?test-blocked=${Date.now()}`);
+    assert.equal(await blockedFeedback.playInterfaceTestTone(), false);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("the loud diagnostic schedules its dedicated three-note Web Audio pattern", async () => {
+  const previousWindow = globalThis.window;
+  let oscillatorStarts = 0;
+
+  class RunningAudioContext {
+    constructor() {
+      this.state = "running";
+      this.currentTime = 0;
+      this.destination = {};
+    }
+
+    createOscillator() {
+      return {
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+        start() { oscillatorStarts += 1; },
+        stop() {},
+      };
+    }
+
+    createGain() {
+      return {
+        gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+      };
+    }
+  }
+
+  globalThis.window = { AudioContext: RunningAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?test-web-audio=${Date.now()}`);
+    assert.equal(await feedback.playInterfaceTestTone(), true);
+    assert.equal(oscillatorStarts, 3);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("a stalled media diagnostic times out and uses a resumed AudioContext", async () => {
+  const previousWindow = globalThis.window;
+  let oscillatorStarts = 0;
+  let pauseCalls = 0;
+
+  class HangingAudio {
+    pause() { pauseCalls += 1; }
+    play() { return new Promise(() => {}); }
+  }
+
+  class ResumableAudioContext {
+    constructor() {
+      this.state = "suspended";
+      this.currentTime = 0;
+      this.sampleRate = 24_000;
+      this.destination = {};
+    }
+
+    createBuffer() { return {}; }
+    createBufferSource() { return { connect() {}, start() {} }; }
+    resume() { this.state = "running"; return Promise.resolve(); }
+    createOscillator() {
+      return {
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+        start() { oscillatorStarts += 1; },
+        stop() {},
+      };
+    }
+    createGain() {
+      return {
+        gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} },
+        connect() {},
+        disconnect() {},
+      };
+    }
+  }
+
+  globalThis.window = { Audio: HangingAudio, AudioContext: ResumableAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?test-timeout=${Date.now()}`);
+    const result = await Promise.race([
+      feedback.playInterfaceTestTone(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("sound test remained pending")), 2_500)),
+    ]);
+    assert.equal(result, true);
+    assert.equal(oscillatorStarts, 3);
+    assert.ok(pauseCalls >= 2);
   } finally {
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;

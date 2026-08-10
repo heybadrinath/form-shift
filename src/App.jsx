@@ -21,6 +21,7 @@ import {
   mutationStatusLabel,
   playInterfaceHaptic,
   playInterfaceHapticForEvent,
+  playInterfaceTestTone,
   playInterfaceTone,
   primeInterfaceAudio,
   readSoundPreference,
@@ -423,6 +424,10 @@ export function App() {
     }
   }
 
+  async function testSound() {
+    return playInterfaceTestTone(true);
+  }
+
   async function startSession(templateId) {
     const template = sessions.find((session) => session.id === templateId);
     if (!template) return false;
@@ -625,6 +630,7 @@ export function App() {
       onNavigate={navigate}
       onLock={lock}
       onToggleSound={toggleSound}
+      onTestSound={testSound}
     >
       {page === "workouts" && (
         <WorkoutHub

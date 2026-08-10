@@ -56,7 +56,9 @@ The restaurant analytics subject matter was intentionally adapted rather than co
 - Reload restored the same active session ID, selected variant, checked sets, and skipped state. Closing/reopening the browser and a sleep/wake cycle returned the same server-backed active session through bootstrap rather than creating a new workout.
 - Finishing remained unavailable until every exercise was completed or explicitly skipped. Completing or ending incomplete created history for Calendar and Analytics.
 - The compact sound button exposed its on/muted state, changed it immediately, and retained that preference after reload without adding a server-side journal record.
-- Generated tones were raised to a bounded high-output level and replaced an in-flight tone instead of stacking rapid clicks into distortion.
+- The sound menu exposed a dedicated three-note loud test, reported accepted or blocked playback without claiming physical audibility, and fit without horizontal overflow at 390 and 320 CSS pixels.
+- Generated tones were lengthened, focused into phone-speaker-friendly frequencies, raised to a bounded near-full-scale level, and replaced an in-flight tone instead of stacking rapid clicks into distortion.
+- Supported Apple audio sessions requested the media playback route; older Apple mobile browsers used the HTML media path when that route could not be activated.
 - Supported vibration-capable browsers received one firm pulse for ordinary controls and stronger semantic patterns for saved sets, journal changes, completed workouts, partial saves, and errors; unsupported browsers continued normally.
 - Async actions exposed a working label and spinner, and the synchronous mutation gate prevented rapid duplicate writes.
 

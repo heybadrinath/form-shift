@@ -29,7 +29,7 @@ The PIN gate protects all persistent owner data before the application shell ope
 - Only one session can be started in each 04:00-to-03:59 `Asia/Kolkata` logical day.
 - The runner shows overall elapsed time. Rest values remain guidance attached to each exercise; there is no rest countdown or alarm.
 - The food comparison tray is temporary and makes that boundary explicit.
-- Short tones acknowledge navigation, saved mutations, and errors without competing with the workout. A compact speaker control disables them, and that preference persists in the current browser.
+- Phone-speaker-focused tones acknowledge navigation, saved mutations, and errors. The speaker menu provides a dedicated loud test plus an explicit mute control, and the mute preference persists in the current browser.
 - Selecting a weight point is read-only. Editing begins only from the explicit **Edit weight** control, protecting against accidental form changes while inspecting the chart.
 
 ## Visual system

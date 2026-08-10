@@ -16,7 +16,7 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 - Stores occasional body-weight measurements and uses an explicit select-then-edit flow so inspecting an entry cannot silently put the form into edit mode.
 - Includes a searchable 76-item Food Index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit, backed by 10 generic family guides.
 - Compares up to four food portions against rough energy and protein references without turning the comparison into a prescribed meal plan.
-- Provides high-output interaction tones with a persistent sound toggle, plus strong best-effort haptics on browsers that expose device vibration.
+- Provides high-output interaction tones, an explicit loud-speaker test, a persistent sound toggle, and strong best-effort haptics on browsers that expose device vibration.
 - Adapts from a desktop dashboard to a focused mobile runner and fixed bottom navigation.
 
 ## Screenshots
@@ -141,6 +141,7 @@ tests/               Node test suites
 - Authentication is a single-owner PIN, not a multi-user account system.
 - The workout journal, workout history, and weight entries are persistent. The food quick-compare tray is intentionally temporary and clears on reload.
 - The sound preference persists only in the current browser; it is not owner data and is not synchronized between devices.
+- The browser can request near-full-scale playback and report whether playback started, but it cannot override physical media volume, Bluetooth routing, speaker limits, or a site-level sound block.
 - Haptics depend on the browser's Device Vibration API and safely fall back to visual and sound feedback when that API is unavailable.
 - The runner shows overall elapsed session time and written rest guidance. It does not run a rest countdown.
 - Muscle exposure is a completed-set distribution, not load-based training volume, recovery advice, or evidence of muscle growth.
