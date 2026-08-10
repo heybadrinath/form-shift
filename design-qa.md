@@ -43,6 +43,7 @@ The restaurant analytics subject matter was intentionally adapted rather than co
 | 2026-08-09 baseline | Authenticated desktop at 1440 × 1050 and mobile at 390 × 844 were checked against the supplied dashboard and cross-device references. | Core visual language accepted; later Calendar and mobile Analytics density work remained outside those screenshots. |
 | 2026-08-10 release pass | The unchanged supplied references were compared again with exact-viewport desktop and mobile captures after the Food, Calendar, Analytics, muscle-panel, feedback, and date-handling refinements. | Canonical screenshots above recorded; desktop fidelity and mobile hierarchy passed. |
 | 2026-08-10 cleanup verification | Temporary authenticated workout and weight rows used for interaction checks were removed, then the production journal was counted again. | All four journal tables verified empty while schema and authentication remained available. |
+| 2026-08-10 tactile feedback pass | Static navigation, button press feedback, generated sound output, and best-effort haptics were checked at 390, 360, and 320 CSS pixels. | Every harmless trusted click produced one intended feedback request, unsupported vibration failed safely, and no transition residue, overflow, warning, or error remained. |
 
 ## Browser checks
 
@@ -55,6 +56,8 @@ The restaurant analytics subject matter was intentionally adapted rather than co
 - Reload restored the same active session ID, selected variant, checked sets, and skipped state. Closing/reopening the browser and a sleep/wake cycle returned the same server-backed active session through bootstrap rather than creating a new workout.
 - Finishing remained unavailable until every exercise was completed or explicitly skipped. Completing or ending incomplete created history for Calendar and Analytics.
 - The compact sound button exposed its on/muted state, changed it immediately, and retained that preference after reload without adding a server-side journal record.
+- Generated tones were raised to a bounded high-output level and replaced an in-flight tone instead of stacking rapid clicks into distortion.
+- Supported vibration-capable browsers received one firm pulse for ordinary controls and stronger semantic patterns for saved sets, journal changes, completed workouts, partial saves, and errors; unsupported browsers continued normally.
 - Async actions exposed a working label and spinner, and the synchronous mutation gate prevented rapid duplicate writes.
 
 ### Food Index

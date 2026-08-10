@@ -1,9 +1,11 @@
 const STORAGE_KEY = "form-shift:sound-enabled";
 const FALLBACK_SAMPLE_RATE = 24_000;
 const FALLBACK_MASTER_GAIN = 0.92;
-const TONE_OUTPUT_GAIN = 6;
+const TONE_OUTPUT_GAIN = 10;
+const TONE_REPLACEMENT_FADE_SECONDS = 0.006;
 const AUDIO_RESUME_TIMEOUT_MS = 250;
 const TAP_COOLDOWN_MS = 50;
+const HAPTIC_DEDUPE_WINDOW_MS = 120;
 
 const tonePatterns = Object.freeze({
   tap: Object.freeze([
@@ -41,11 +43,31 @@ const tonePatterns = Object.freeze({
   ]),
 });
 
+const hapticPatterns = Object.freeze({
+  tap: Object.freeze([45]),
+  navigate: Object.freeze([55]),
+  set: Object.freeze([75, 35, 95]),
+  saved: Object.freeze([70, 35, 110]),
+  complete: Object.freeze([90, 45, 125, 55, 180]),
+  unlock: Object.freeze([70, 35, 110]),
+  partial: Object.freeze([85, 50, 85]),
+  error: Object.freeze([140, 65, 140]),
+});
+
+const hapticAliases = Object.freeze({
+  button: "tap",
+  save: "saved",
+  finish: "complete",
+});
+
 let audioContext = null;
+let activeWebAudioTone = null;
 let fallbackAudio = null;
 let fallbackPlaybackId = 0;
 let resumePromise = null;
 let lastTapAt = 0;
+let lastHapticAt = Number.NEGATIVE_INFINITY;
+let lastHapticKey = null;
 const fallbackUriCache = new Map();
 
 export function parseSoundPreference(value, fallback = true) {
@@ -83,6 +105,68 @@ export function mutationSuccessTone(key) {
   return "saved";
 }
 
+function resolveHapticKind(kind) {
+  const resolvedKind = hapticAliases[kind] ?? kind;
+  return hapticPatterns[resolvedKind] ? resolvedKind : "tap";
+}
+
+export function hapticPattern(kind) {
+  return hapticPatterns[resolveHapticKind(kind)];
+}
+
+export function mutationSuccessHaptic(key) {
+  if (key === "unlock") return "unlock";
+  if (key === "finish") return "complete";
+  if (key === "end-incomplete") return "partial";
+  if (key?.startsWith("set:")) return "set";
+  return "saved";
+}
+
+function reducedMotionRequested(matchMediaTarget) {
+  const query = matchMediaTarget
+    ?? globalThis.window?.matchMedia?.bind(globalThis.window);
+  if (typeof query !== "function") return false;
+  try {
+    return query("(prefers-reduced-motion: reduce)")?.matches === true;
+  } catch {
+    return false;
+  }
+}
+
+function hapticDedupeKey(kind) {
+  return kind === "tap" || kind === "navigate" ? "intent" : kind;
+}
+
+export function playInterfaceHaptic(kind, enabled = true, options = {}) {
+  if (!enabled) return false;
+
+  const navigatorTarget = options.navigatorTarget ?? globalThis.navigator;
+  const documentTarget = options.documentTarget ?? globalThis.document;
+  if (typeof navigatorTarget?.vibrate !== "function") return false;
+  if (documentTarget?.visibilityState && documentTarget.visibilityState !== "visible") return false;
+  if (options.respectReducedMotion !== false && reducedMotionRequested(options.matchMediaTarget)) return false;
+
+  const resolvedKind = resolveHapticKind(kind);
+  const dedupeKey = hapticDedupeKey(resolvedKind);
+  const now = typeof options.now === "function" ? options.now() : Date.now();
+  if (dedupeKey === lastHapticKey && now - lastHapticAt < HAPTIC_DEDUPE_WINDOW_MS) return false;
+
+  try {
+    const started = navigatorTarget.vibrate(hapticPatterns[resolvedKind]);
+    if (started === false) return false;
+    lastHapticAt = now;
+    lastHapticKey = dedupeKey;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function playInterfaceHapticForEvent(event, kind, enabled = true, options = {}) {
+  if (event?.isTrusted !== true) return false;
+  return playInterfaceHaptic(kind, enabled, options);
+}
+
 function getAudioContext() {
   if (typeof window === "undefined") return null;
   const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
@@ -91,12 +175,40 @@ function getAudioContext() {
   if (!audioContext || audioContext.state === "closed") {
     try {
       audioContext = new AudioContextClass({ latencyHint: "interactive" });
+      activeWebAudioTone = null;
       resumePromise = null;
     } catch {
       audioContext = null;
     }
   }
   return audioContext;
+}
+
+function replaceActiveWebAudioTone(context) {
+  const activeTone = activeWebAudioTone;
+  if (!activeTone || activeTone.context !== context) return;
+  activeWebAudioTone = null;
+
+  const fadeEnd = context.currentTime + TONE_REPLACEMENT_FADE_SECONDS;
+  try {
+    activeTone.output.gain.cancelScheduledValues?.(context.currentTime);
+    activeTone.output.gain.setValueAtTime(1, context.currentTime);
+    if (typeof activeTone.output.gain.linearRampToValueAtTime === "function") {
+      activeTone.output.gain.linearRampToValueAtTime(0.0001, fadeEnd);
+    } else {
+      activeTone.output.gain.setValueAtTime(0.0001, fadeEnd);
+    }
+  } catch {
+    // Stopping the oscillators still prevents repeated tones from stacking.
+  }
+
+  for (const oscillator of activeTone.oscillators) {
+    try {
+      oscillator.stop(fadeEnd + 0.002);
+    } catch {
+      // An oscillator that has already ended needs no further cleanup.
+    }
+  }
 }
 
 function createSilentSource(context) {
@@ -285,8 +397,25 @@ function playFallbackTone(kind) {
 function scheduleWebAudioTone(context, kind) {
   if (context.state !== "running") return false;
   const startAt = context.currentTime + 0.008;
+  let output = null;
+  let voice = null;
 
   try {
+    output = context.createGain();
+    output.gain.setValueAtTime(1, startAt);
+    output.connect(context.destination);
+    replaceActiveWebAudioTone(context);
+
+    voice = {
+      context,
+      disposed: false,
+      gains: [],
+      oscillators: [],
+      output,
+      remaining: tonePattern(kind).length,
+    };
+    activeWebAudioTone = voice;
+
     for (const note of tonePattern(kind)) {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
@@ -302,16 +431,52 @@ function scheduleWebAudioTone(context, kind) {
       gain.gain.exponentialRampToValueAtTime(note.gain * TONE_OUTPUT_GAIN, noteStart + Math.min(0.009, note.duration / 4));
       gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
       oscillator.connect(gain);
-      gain.connect(context.destination);
+      gain.connect(output);
+      voice.gains.push(gain);
+      voice.oscillators.push(oscillator);
       oscillator.onended = () => {
+        if (voice.disposed) return;
         oscillator.disconnect();
         gain.disconnect();
+        voice.remaining -= 1;
+        if (voice.remaining === 0) {
+          output.disconnect();
+          if (activeWebAudioTone === voice) activeWebAudioTone = null;
+        }
       };
       oscillator.start(noteStart);
       oscillator.stop(noteEnd + 0.012);
     }
     return true;
   } catch {
+    if (voice) {
+      voice.disposed = true;
+      if (activeWebAudioTone === voice) activeWebAudioTone = null;
+      for (const oscillator of voice.oscillators) {
+        try {
+          oscillator.stop(context.currentTime);
+        } catch {
+          // A partially scheduled oscillator may already be stopped.
+        }
+        try {
+          oscillator.disconnect();
+        } catch {
+          // A failed node may never have connected.
+        }
+      }
+      for (const gain of voice.gains) {
+        try {
+          gain.disconnect();
+        } catch {
+          // A failed node may never have connected.
+        }
+      }
+    }
+    try {
+      output?.disconnect();
+    } catch {
+      // The fallback tone remains available even when cleanup is best effort.
+    }
     return false;
   }
 }
@@ -352,6 +517,7 @@ export function playInterfaceTone(kind, enabled = true) {
 
 export function resetInterfaceAudioAfterBackground() {
   resumePromise = null;
+  activeWebAudioTone = null;
   const context = audioContext;
   audioContext = null;
   if (context && context.state !== "closed" && typeof context.close === "function") {

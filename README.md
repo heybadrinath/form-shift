@@ -16,7 +16,7 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 - Stores occasional body-weight measurements and uses an explicit select-then-edit flow so inspecting an entry cannot silently put the form into edit mode.
 - Includes a searchable 76-item Food Index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit, backed by 10 generic family guides.
 - Compares up to four food portions against rough energy and protein references without turning the comparison into a prescribed meal plan.
-- Provides subtle interaction tones with a persistent, accessible sound toggle; the preference stays in the current browser and can be muted at any time.
+- Provides high-output interaction tones with a persistent sound toggle, plus strong best-effort haptics on browsers that expose device vibration.
 - Adapts from a desktop dashboard to a focused mobile runner and fixed bottom navigation.
 
 ## Screenshots
@@ -112,7 +112,7 @@ Run the complete automated test suite:
 npm test
 ```
 
-The test command covers action single-flight behavior, sound-preference persistence, Calendar filtering and metrics, weekly muscle-exposure classification, history calculations, daily authentication and signed-cookie expiry at the 04:00 boundary, server-safe date-only weight handling, workout invariants, workout-history shaping, template variants, journal-reset safeguards, schema safeguards, API authentication, and static-hosting packaging.
+The test command covers action single-flight behavior, sound output and preference persistence, safe haptic patterns, Calendar filtering and metrics, weekly muscle-exposure classification, history calculations, daily authentication and signed-cookie expiry at the 04:00 boundary, server-safe date-only weight handling, workout invariants, workout-history shaping, template variants, journal-reset safeguards, schema safeguards, API authentication, and static-hosting packaging.
 
 Build the production assets with:
 
@@ -141,6 +141,7 @@ tests/               Node test suites
 - Authentication is a single-owner PIN, not a multi-user account system.
 - The workout journal, workout history, and weight entries are persistent. The food quick-compare tray is intentionally temporary and clears on reload.
 - The sound preference persists only in the current browser; it is not owner data and is not synchronized between devices.
+- Haptics depend on the browser's Device Vibration API and safely fall back to visual and sound feedback when that API is unavailable.
 - The runner shows overall elapsed session time and written rest guidance. It does not run a rest countdown.
 - Muscle exposure is a completed-set distribution, not load-based training volume, recovery advice, or evidence of muscle growth.
 - Food energy and protein values are approximate references, not a personalized daily prescription.

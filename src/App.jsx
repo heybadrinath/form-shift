@@ -16,8 +16,11 @@ import { sessions } from "./data.js";
 import { nextChennaiWorkoutBoundaryMs } from "./dailyAccess.js";
 import { pageMotionMode, shouldAnimatePageTransition } from "./navigationMotion.js";
 import {
+  mutationSuccessHaptic,
   mutationSuccessTone,
   mutationStatusLabel,
+  playInterfaceHaptic,
+  playInterfaceHapticForEvent,
   playInterfaceTone,
   primeInterfaceAudio,
   readSoundPreference,
@@ -278,12 +281,12 @@ export function App() {
   useEffect(() => {
     function eligibleControl(target) {
       const control = target.closest?.("button:not(:disabled), a[href]");
-      if (!control || control.dataset.sound === "off") return null;
-      return control;
+      return control ?? null;
     }
 
     function handleInterfaceIntent(event) {
-      if (!eligibleControl(event.target)) return;
+      const control = eligibleControl(event.target);
+      if (!control || control.dataset.sound === "off") return;
       primeInterfaceAudio(soundEnabled);
     }
 
@@ -295,7 +298,12 @@ export function App() {
     function handleInterfaceClick(event) {
       const control = eligibleControl(event.target);
       if (!control) return;
-      playInterfaceTone(control.dataset.sound || "tap", soundEnabled);
+      const soundKind = control.dataset.sound || "tap";
+      if (soundKind !== "off") playInterfaceTone(soundKind, soundEnabled);
+      if (control.dataset.haptic !== "off") {
+        const hapticKind = control.dataset.haptic || (soundKind === "off" ? "tap" : soundKind);
+        playInterfaceHapticForEvent(event, hapticKind);
+      }
     }
 
     document.addEventListener("pointerdown", handleInterfaceIntent, true);
@@ -336,6 +344,7 @@ export function App() {
         else clearSyncNotice(mutationStatusLabel(key));
         if (playSuccessSound) {
           playInterfaceTone(mutationSuccessTone(key), soundEnabledRef.current);
+          playInterfaceHaptic(mutationSuccessHaptic(key));
         }
         return result;
       } catch (mutationError) {
@@ -346,6 +355,7 @@ export function App() {
         setError(readableError(mutationError));
         showSyncNotice("error", "Could not save. Try again.", 3200);
         playInterfaceTone("error", soundEnabledRef.current);
+        playInterfaceHaptic("error");
         throw mutationError;
       } finally {
         setMutationKey(null);
@@ -527,9 +537,11 @@ export function App() {
           "The workout is safe. Add the weight again from Analytics.",
         );
         playInterfaceTone("partial", soundEnabledRef.current);
+        playInterfaceHaptic("partial");
       } else {
         showSyncNotice("saved", "Workout saved to your journal", 1800);
         playInterfaceTone("complete", soundEnabledRef.current);
+        playInterfaceHaptic("complete");
       }
       return true;
     } catch {

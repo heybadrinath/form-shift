@@ -84,6 +84,7 @@ button {
 button:not(:disabled),
 a {
   cursor: pointer;
+  touch-action: manipulation;
   transition:
     filter var(--motion-state) ease,
     transform var(--motion-fast) var(--ease-standard),
@@ -97,6 +98,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 @media (hover: hover) {
   button:not(:disabled):hover,
   a:hover {
@@ -108,6 +114,13 @@ button:not(:disabled):active,
 a:active {
   transform: scale(0.985);
   filter: none;
+}
+
+@media (pointer: coarse) {
+  button:not(:disabled):active {
+    transform: translateY(1px) scale(0.97);
+    transition-duration: 45ms;
+  }
 }
 
 button[aria-busy="true"] {
