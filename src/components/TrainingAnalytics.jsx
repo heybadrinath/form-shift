@@ -332,7 +332,7 @@ export function TrainingAnalytics({
             <p className="training-analytics-weight-selection-hint">Select a chart point or recent measurement to inspect it. Editing starts only from the separate Edit weight action.</p>
           ) : null}
 
-          <form className="training-analytics-weight-form" onSubmit={submitWeight} aria-busy={interactionBusy}>
+          <form className="training-analytics-weight-form" onSubmit={submitWeight} aria-busy={submitting}>
             <div className="training-analytics-weight-form__title">
               <span>{editingId ? "Edit measurement" : "Add measurement"}</span>
               {editingId && <button type="button" onClick={() => resetWeightForm()} disabled={interactionBusy} aria-label="Cancel editing weight"><X size={16} /></button>}
@@ -422,7 +422,7 @@ export function TrainingAnalytics({
                     <div>
                       <span><strong>Session {sessionId}</strong><small>{count} logged</small></span>
                       <div className="training-analytics-mix-track" aria-label={`Session ${sessionId}: ${count} workouts`}>
-                        <i className={`history-session-${sessionId.toLowerCase()}`} style={{ width: `${width}%` }} />
+                        <i className={`${count ? "" : "is-empty "}history-session-${sessionId.toLowerCase()}`} style={{ width: `${width}%` }} />
                       </div>
                     </div>
                   </div>

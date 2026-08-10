@@ -14,6 +14,7 @@ import { WorkoutHub } from "./components/WorkoutHub.jsx";
 import { guideForExercise } from "./exerciseLibrary.js";
 import { sessions } from "./data.js";
 import { nextChennaiWorkoutBoundaryMs } from "./dailyAccess.js";
+import { pageMotionMode } from "./navigationMotion.js";
 import {
   mutationSuccessTone,
   mutationStatusLabel,
@@ -80,6 +81,7 @@ export function App() {
   const [page, setPage] = useState("workouts");
   const [selectedSessionId, setSelectedSessionId] = useState("A");
   const [authState, setAuthState] = useState("loading");
+  const [bootstrapSlow, setBootstrapSlow] = useState(false);
   const [appState, setAppState] = useState(emptyState);
   const [mutationKey, setMutationKey] = useState(null);
   const [error, setError] = useState("");
@@ -87,31 +89,88 @@ export function App() {
   const [syncNotice, setSyncNotice] = useState(null);
   const mutationLockRef = useRef(null);
   const noticeTimerRef = useRef(null);
+  const noticeSlowTimerRef = useRef(null);
+  const motionCleanupTimerRef = useRef(null);
+  const activeViewTransitionRef = useRef(null);
   const transitionRequestRef = useRef(0);
+  const pageRef = useRef(page);
   const soundEnabledRef = useRef(soundEnabled);
 
   const transitionTo = useCallback((nextPage) => {
     const requestId = transitionRequestRef.current + 1;
     transitionRequestRef.current = requestId;
+    activeViewTransitionRef.current?.skipTransition?.();
+    activeViewTransitionRef.current = null;
+    if (motionCleanupTimerRef.current) window.clearTimeout(motionCleanupTimerRef.current);
+
+    const root = document.documentElement;
+    const clearMotionState = () => {
+      if (transitionRequestRef.current !== requestId) return;
+      root.classList.remove("is-native-page-transition", "is-fallback-page-transition");
+      delete root.dataset.pageMotion;
+    };
+
+    if (nextPage === pageRef.current) {
+      clearMotionState();
+      return;
+    }
+
+    const motionMode = pageMotionMode(pageRef.current, nextPage);
+    root.dataset.pageMotion = motionMode;
     const commit = () => {
       if (transitionRequestRef.current !== requestId) return;
-      flushSync(() => setPage(nextPage));
+      flushSync(() => {
+        pageRef.current = nextPage;
+        setPage(nextPage);
+      });
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     };
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion && typeof document.startViewTransition === "function") {
-      document.startViewTransition(commit);
-      return;
+      root.classList.add("is-native-page-transition");
+      try {
+        const transition = document.startViewTransition(commit);
+        activeViewTransitionRef.current = transition;
+        Promise.resolve(transition.finished)
+          .catch(() => undefined)
+          .finally(() => {
+            if (activeViewTransitionRef.current === transition) activeViewTransitionRef.current = null;
+            clearMotionState();
+          });
+        return;
+      } catch {
+        root.classList.remove("is-native-page-transition");
+      }
     }
+
+    root.classList.add("is-fallback-page-transition");
     commit();
+    motionCleanupTimerRef.current = window.setTimeout(clearMotionState, reduceMotion ? 0 : 260);
   }, []);
 
-  const showSyncNotice = useCallback((status, message, holdMs = null) => {
+  const showSyncNotice = useCallback((status, message, holdMs = null, detail = null) => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
-    setSyncNotice({ status, message });
+    if (noticeSlowTimerRef.current) window.clearTimeout(noticeSlowTimerRef.current);
+    setSyncNotice({ status, message, detail });
+    if (status === "saving") {
+      noticeSlowTimerRef.current = window.setTimeout(() => {
+        setSyncNotice((current) => (
+          current?.status === "saving" && current.message === message
+            ? { ...current, detail: "Still working — keep this page open." }
+            : current
+        ));
+      }, 2600);
+    }
     if (holdMs) {
       noticeTimerRef.current = window.setTimeout(() => setSyncNotice(null), holdMs);
     }
+  }, []);
+
+  const clearSyncNotice = useCallback((message) => {
+    if (noticeSlowTimerRef.current) window.clearTimeout(noticeSlowTimerRef.current);
+    setSyncNotice((current) => (
+      current?.status === "saving" && current.message === message ? null : current
+    ));
   }, []);
 
   const activeTemplate = useMemo(
@@ -145,14 +204,23 @@ export function App() {
 
   useEffect(() => {
     const controller = new AbortController();
+    const slowTimer = window.setTimeout(() => setBootstrapSlow(true), 2200);
     appApi.bootstrap(controller.signal)
-      .then((payload) => applyBootstrap(payload, { openActive: true }))
+      .then((payload) => {
+        window.clearTimeout(slowTimer);
+        setBootstrapSlow(false);
+        applyBootstrap(payload, { openActive: true });
+      })
       .catch((bootstrapError) => {
+        window.clearTimeout(slowTimer);
         if (bootstrapError.name === "AbortError") return;
         setError(readableError(bootstrapError));
         setAuthState("error");
       });
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(slowTimer);
+      controller.abort();
+    };
   }, [applyBootstrap]);
 
   useEffect(() => {
@@ -226,16 +294,17 @@ export function App() {
 
   useEffect(() => () => {
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    if (noticeSlowTimerRef.current) window.clearTimeout(noticeSlowTimerRef.current);
+    if (motionCleanupTimerRef.current) window.clearTimeout(motionCleanupTimerRef.current);
+    activeViewTransitionRef.current?.skipTransition?.();
   }, []);
 
-  async function runMutation(key, action, { playSuccessSound = true } = {}) {
+  async function runMutation(key, action, { playSuccessSound = true, showSuccess = true } = {}) {
     const ticket = startSingleFlight(mutationLockRef, key, async () => {
-      setMutationKey(key);
-      setError("");
-      showSyncNotice("saving", mutationStatusLabel(key));
       try {
         const result = await action();
-        showSyncNotice("saved", "Saved to your journal", 1500);
+        if (showSuccess) showSyncNotice("saved", "Saved to your journal", 1500);
+        else clearSyncNotice(mutationStatusLabel(key));
         if (playSuccessSound) {
           playInterfaceTone(mutationSuccessTone(key), soundEnabledRef.current);
         }
@@ -259,6 +328,9 @@ export function App() {
       return false;
     }
 
+    setMutationKey(key);
+    setError("");
+    showSyncNotice("saving", mutationStatusLabel(key));
     await ticket.promise;
     return true;
   }
@@ -340,44 +412,49 @@ export function App() {
     try {
       return await runMutation(`set:${exerciseId}:${setNumber}`, async () => {
         const payload = await appApi.toggleSet(sessionId, exerciseId, setNumber, completed);
-        setAppState((current) => ({
-          ...current,
-          activeSession: mergeSet(current.activeSession, payload.set, payload.exercise),
-        }));
-      });
+        setAppState((current) => (
+          current.activeSession?.id === sessionId
+            ? { ...current, activeSession: mergeSet(current.activeSession, payload.set, payload.exercise) }
+            : current
+        ));
+      }, { showSuccess: false });
     } catch {
       return false;
     }
   }
 
   async function selectVariant(exerciseId, variant) {
+    const sessionId = appState.activeSession.id;
     try {
       return await runMutation(`variant:${exerciseId}:${variant}`, async () => {
-        const payload = await appApi.selectVariant(appState.activeSession.id, exerciseId, variant);
-        setAppState((current) => ({
-          ...current,
-          activeSession: mergeExercise(current.activeSession, payload.exercise),
-        }));
-      });
+        const payload = await appApi.selectVariant(sessionId, exerciseId, variant);
+        setAppState((current) => (
+          current.activeSession?.id === sessionId
+            ? { ...current, activeSession: mergeExercise(current.activeSession, payload.exercise) }
+            : current
+        ));
+      }, { showSuccess: false });
     } catch {
       return false;
     }
   }
 
   async function skipExercise(exerciseId) {
+    const sessionId = appState.activeSession.id;
     const exercise = appState.activeSession.exercises.find((item) => item.exerciseId === exerciseId);
     try {
       return await runMutation(`skip:${exerciseId}`, async () => {
         const payload = await appApi.skipExercise(
-          appState.activeSession.id,
+          sessionId,
           exerciseId,
           !exercise?.skippedAt,
         );
-        setAppState((current) => ({
-          ...current,
-          activeSession: mergeExercise(current.activeSession, payload.exercise),
-        }));
-      });
+        setAppState((current) => (
+          current.activeSession?.id === sessionId
+            ? { ...current, activeSession: mergeExercise(current.activeSession, payload.exercise) }
+            : current
+        ));
+      }, { showSuccess: false });
     } catch {
       return false;
     }
@@ -390,7 +467,15 @@ export function App() {
       const started = await runMutation("finish", async () => {
         const workoutPayload = await appApi.finishWorkout(sessionId);
         setAppState((current) => reconcileClosedWorkout(current, workoutPayload.session));
+        transitionTo("analytics");
         if (weightKg !== null) {
+          setMutationKey("finish-weight");
+          showSyncNotice(
+            "saving",
+            "Workout saved · saving weight",
+            null,
+            "The workout is safe. Waiting for the weight entry.",
+          );
           try {
             const weightPayload = await appApi.addWeight({ weightKg });
             setAppState((current) => ({
@@ -401,14 +486,19 @@ export function App() {
             weightSaveError = weightError;
           }
         }
-        transitionTo("analytics");
-      }, { playSuccessSound: false });
+      }, { playSuccessSound: false, showSuccess: false });
       if (!started) return false;
       if (weightSaveError) {
         setError("The workout was saved, but the weight entry was not. Add it again from Analytics.");
-        showSyncNotice("error", "Workout saved · weight needs retry", 4600);
+        showSyncNotice(
+          "error",
+          "Workout saved · weight needs retry",
+          4600,
+          "The workout is safe. Add the weight again from Analytics.",
+        );
         playInterfaceTone("partial", soundEnabledRef.current);
       } else {
+        showSyncNotice("saved", "Workout saved to your journal", 1800);
         playInterfaceTone("complete", soundEnabledRef.current);
       }
       return true;
@@ -459,6 +549,10 @@ export function App() {
       <div className="app-loading" role="status">
         <span><Barbell size={28} weight="fill" /></span>
         <strong>Loading your training journal…</strong>
+        <p>{bootstrapSlow
+          ? "Still contacting the server. Your saved journal is not affected."
+          : "Restoring today’s session and recent history."}</p>
+        <i aria-hidden="true"><b /></i>
       </div>
     );
   }

@@ -57,6 +57,7 @@ test("mutation keys resolve to short journal-wide status labels", () => {
   assert.equal(mutationStatusLabel("set:a-press:2"), "Saving set");
   assert.equal(mutationStatusLabel("weight:entry-1"), "Updating weight");
   assert.equal(mutationStatusLabel("finish"), "Saving workout");
+  assert.equal(mutationStatusLabel("finish-weight"), "Workout saved · saving weight");
   assert.equal(mutationStatusLabel(null), "");
 });
 

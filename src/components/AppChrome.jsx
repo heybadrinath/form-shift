@@ -44,6 +44,13 @@ export function AppChrome({
 }) {
   const busy = Boolean(mutationKey);
   const lockBusy = mutationKey === "lock";
+  const syncDetail = syncNotice?.detail ?? (
+    syncNotice?.status === "saving"
+      ? "Waiting for server confirmation."
+      : syncNotice?.status === "saved"
+        ? "Your journal is up to date."
+        : "Nothing else changed. Tap again to retry."
+  );
 
   return (
     <div className="site-stage">
@@ -149,13 +156,23 @@ export function AppChrome({
         </nav>
 
         {syncNotice && (
-          <div className={`app-sync-notice is-${syncNotice.status}`} role="status" aria-live="polite">
-            <span>
+          <div
+            className={`app-sync-notice is-${syncNotice.status}`}
+            key={`${syncNotice.status}:${syncNotice.message}`}
+            role={syncNotice.status === "error" ? "alert" : "status"}
+            aria-live={syncNotice.status === "error" ? "assertive" : "polite"}
+            aria-atomic="true"
+          >
+            <span className="app-sync-notice__icon">
               {syncNotice.status === "saving" && <InlineSpinner size="sm" />}
               {syncNotice.status === "saved" && <CheckCircle size={17} weight="fill" />}
               {syncNotice.status === "error" && <WarningCircle size={17} weight="fill" />}
             </span>
-            <strong>{syncNotice.message}</strong>
+            <span className="app-sync-notice__copy">
+              <strong>{syncNotice.message}</strong>
+              <small>{syncDetail}</small>
+            </span>
+            <i className="app-sync-notice__track" aria-hidden="true"><b /></i>
           </div>
         )}
       </div>

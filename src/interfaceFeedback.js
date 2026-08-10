@@ -371,6 +371,7 @@ export function mutationStatusLabel(key) {
   if (key === "lock") return "Locking journal";
   if (key === "start") return "Starting workout";
   if (key === "finish") return "Saving workout";
+  if (key === "finish-weight") return "Workout saved · saving weight";
   if (key === "end-incomplete") return "Ending workout";
   if (key === "weight:add") return "Saving weight";
   if (key.startsWith("weight:")) return "Updating weight";

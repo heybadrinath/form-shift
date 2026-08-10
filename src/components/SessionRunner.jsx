@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { guideForExercise } from "../exerciseLibrary.js";
 import { InlineSpinner } from "./InlineSpinner.jsx";
+import { MAX_BODY_WEIGHT_KG, MIN_BODY_WEIGHT_KG } from "./historyUtils.js";
 import "./session-runner.css";
 
 function formatElapsed(startedAt, now) {
@@ -75,9 +76,11 @@ export function SessionRunner({
   const [showFinish, setShowFinish] = useState(false);
   const [showEndIncomplete, setShowEndIncomplete] = useState(false);
   const [weight, setWeight] = useState("");
+  const [weightError, setWeightError] = useState("");
   const busy = Boolean(mutationKey);
   const skipBusy = mutationKey === `skip:${session.exercises[currentIndex].id}`;
-  const finishBusy = mutationKey === "finish";
+  const finishWeightBusy = mutationKey === "finish-weight";
+  const finishBusy = mutationKey === "finish" || finishWeightBusy;
   const endIncompleteBusy = mutationKey === "end-incomplete";
 
   useEffect(() => {
@@ -121,7 +124,7 @@ export function SessionRunner({
     if (!wasCompleted && currentState.completedSets.size + 1 >= currentExercise.sets) {
       window.setTimeout(() => setCurrentIndex((index) => (
         nextOpenIndex(session, record, index, currentExercise.id)
-      )), 280);
+      )), window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 210);
     }
   }
 
@@ -136,7 +139,15 @@ export function SessionRunner({
 
   async function finishSession() {
     const parsed = weight.trim() === "" ? null : Number(weight);
-    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 30 || parsed > 250)) return;
+    if (parsed !== null && (
+      !Number.isFinite(parsed)
+      || parsed < MIN_BODY_WEIGHT_KG
+      || parsed > MAX_BODY_WEIGHT_KG
+    )) {
+      setWeightError(`Enter ${MIN_BODY_WEIGHT_KG}–${MAX_BODY_WEIGHT_KG} kg, or leave this empty.`);
+      return;
+    }
+    setWeightError("");
     const started = await onFinish(parsed);
     if (!started) return;
     setShowFinish(false);
@@ -158,7 +169,7 @@ export function SessionRunner({
         </div>
       </header>
 
-      <section className="session-v2__progress" aria-label={`${progress}% of workout handled`}>
+      <section className={`session-v2__progress${mutationKey?.startsWith("set:") ? " is-updating" : ""}`} aria-label={`${progress}% of workout handled`}>
         <div>
           <span>{handledCount} of {session.exercises.length} exercises</span>
           <strong>{progress}%</strong>
@@ -176,7 +187,7 @@ export function SessionRunner({
       )}
 
       <div className="session-v2__layout">
-        <article className={`session-v2__exercise tone-bg-${session.tone}`}>
+        <article key={currentExercise.id} className={`session-v2__exercise tone-bg-${session.tone}`}>
           <div className="session-v2__visual">
             <button onClick={() => setExpandedImage(true)} aria-label={`Expand ${selectedVariant.label} instructions`}>
               <img
@@ -214,7 +225,7 @@ export function SessionRunner({
                     return (
                       <button
                         key={variant.id}
-                        className={selectedVariant.id === variant.id ? "is-selected" : ""}
+                        className={`${selectedVariant.id === variant.id ? "is-selected" : ""}${variantBusy ? " is-pending" : ""}`}
                         onClick={() => onSelectVariant(currentExercise.id, variant.id)}
                         aria-pressed={selectedVariant.id === variant.id}
                         aria-disabled={variantDisabled}
@@ -240,10 +251,13 @@ export function SessionRunner({
                 const setNumber = index + 1;
                 const completed = currentState.completedSets.has(setNumber);
                 const thisSetBusy = mutationKey === `set:${currentExercise.id}:${setNumber}`;
+                const pendingClass = thisSetBusy
+                  ? completed ? "is-pending-remove" : "is-pending-complete"
+                  : "";
                 return (
                   <button
                     key={setNumber}
-                    className={completed ? "is-complete" : ""}
+                    className={`${completed ? "is-complete" : ""} ${pendingClass}`.trim()}
                     onClick={() => toggleSet(setNumber)}
                     disabled={busy || Boolean(currentState.skippedAt)}
                     aria-disabled={busy || Boolean(currentState.skippedAt)}
@@ -252,7 +266,9 @@ export function SessionRunner({
                   >
                     <span>{thisSetBusy ? <InlineSpinner size="sm" /> : completed ? <Check size={20} weight="bold" /> : setNumber}</span>
                     <strong>{currentExercise.sets === 1 ? "Complete block" : `Set ${setNumber}`}</strong>
-                    <small>{thisSetBusy ? "Saving…" : completed ? "Recorded" : "Tap when done"}</small>
+                    <small>{thisSetBusy
+                      ? completed ? "Removing from journal…" : "Waiting for confirmation…"
+                      : completed ? "Recorded" : "Tap when done"}</small>
                   </button>
                 );
               })}
@@ -273,7 +289,7 @@ export function SessionRunner({
             </div>
 
             <button
-              className="session-v2__skip"
+              className={`session-v2__skip${skipBusy ? " is-pending" : ""}`}
               onClick={skipCurrent}
               disabled={busy || Boolean(currentState.completedAt)}
               aria-disabled={busy || Boolean(currentState.completedAt)}
@@ -354,11 +370,31 @@ export function SessionRunner({
             <p>Your start time, finish time and set checkmarks will stay in your history.</p>
             <label>
               <span>Weight today <small>optional</small></span>
-              <div><input inputMode="decimal" value={weight} onChange={(event) => setWeight(event.target.value)} disabled={busy} aria-disabled={busy} placeholder="73.5" /><strong>kg</strong></div>
+              <div>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={MIN_BODY_WEIGHT_KG}
+                  max={MAX_BODY_WEIGHT_KG}
+                  step="0.1"
+                  value={weight}
+                  onChange={(event) => {
+                    setWeight(event.target.value);
+                    setWeightError("");
+                  }}
+                  disabled={busy}
+                  aria-disabled={busy}
+                  aria-invalid={Boolean(weightError)}
+                  aria-describedby={weightError ? "finish-weight-error" : undefined}
+                  placeholder="73.5"
+                />
+                <strong>kg</strong>
+              </div>
+              {weightError && <small className="session-v2__weight-error" id="finish-weight-error" role="alert">{weightError}</small>}
             </label>
             <button className="primary-action dark-action" onClick={finishSession} disabled={busy} aria-disabled={busy} aria-busy={finishBusy}>
               {finishBusy ? <InlineSpinner /> : <CheckCircle size={20} weight="fill" />}
-              {finishBusy ? "Saving workout…" : "Save completed workout"}
+              {finishWeightBusy ? "Workout saved · saving weight…" : finishBusy ? "Saving workout…" : "Save completed workout"}
             </button>
           </section>
         </div>

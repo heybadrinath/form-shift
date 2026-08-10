@@ -20,7 +20,8 @@ async function requestJson(path, { method = "GET", body, signal } = {}) {
   let payload = null;
   try {
     payload = await response.json();
-  } catch {
+  } catch (parseError) {
+    if (parseError?.name === "AbortError" || parseError?.name === "TimeoutError") throw parseError;
     throw new ApiError("The server returned an unreadable response.", {
       code: "invalid_server_response",
       status: response.status,

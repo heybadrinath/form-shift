@@ -196,6 +196,8 @@
   transition: opacity 150ms ease, stroke-width 150ms ease;
 }
 
+.muscle-map__region.is-none { animation: none; }
+
 .muscle-map__region.is-selected {
   stroke: var(--paper);
   stroke-width: 4;
@@ -478,6 +480,8 @@
   transform-origin: left center;
   animation: muscle-exposure-track-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+.muscle-exposure__ledger button.is-none .muscle-exposure__ledger-track > i { animation: none; }
 
 .muscle-exposure__ledger-track > i.is-direct {
   background: var(--coral);

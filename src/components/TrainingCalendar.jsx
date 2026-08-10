@@ -563,7 +563,7 @@ export function TrainingCalendar({
                     type="button"
                     className={`history-calendar-record ${record.isComplete ? "" : "is-incomplete"}`}
                     key={record.recordKey}
-                    style={{ "--record-order": index }}
+                    style={{ "--record-order": Math.min(index, 5) }}
                     onClick={() => onRecordSelect(record)}
                     aria-label={`Open Session ${record.sessionId} from ${formatFullDate(record.logicalDateKey)}`}
                   >
@@ -573,7 +573,7 @@ export function TrainingCalendar({
                   <article
                     className={`history-calendar-record ${record.isComplete ? "" : "is-incomplete"}`}
                     key={record.recordKey}
-                    style={{ "--record-order": index }}
+                    style={{ "--record-order": Math.min(index, 5) }}
                   >
                     {content}
                   </article>
