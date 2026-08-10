@@ -1,8 +1,7 @@
 const STORAGE_KEY = "form-shift:sound-enabled";
 const FALLBACK_SAMPLE_RATE = 24_000;
-const FALLBACK_TARGET_PEAK = 0.96;
-const FALLBACK_SATURATION_DRIVE = 1.55;
-const WEB_AUDIO_MASTER_GAIN = 0.98;
+const FALLBACK_MASTER_GAIN = 0.92;
+const TONE_OUTPUT_GAIN = 11.25;
 const TONE_REPLACEMENT_FADE_SECONDS = 0.006;
 const AUDIO_RESUME_TIMEOUT_MS = 250;
 const AUDIO_TEST_PLAY_TIMEOUT_MS = 1_500;
@@ -11,42 +10,37 @@ const HAPTIC_DEDUPE_WINDOW_MS = 120;
 
 const tonePatterns = Object.freeze({
   tap: Object.freeze([
-    Object.freeze({ frequency: 1_650, frequencyEnd: 1_350, duration: 0.13, delay: 0, gain: 0.12, type: "triangle" }),
+    Object.freeze({ frequency: 620, frequencyEnd: 500, duration: 0.042, delay: 0, gain: 0.085, type: "sine" }),
   ]),
   navigate: Object.freeze([
-    Object.freeze({ frequency: 1_150, frequencyEnd: 1_400, duration: 0.12, delay: 0, gain: 0.082, type: "triangle" }),
-    Object.freeze({ frequency: 1_750, frequencyEnd: 2_050, duration: 0.15, delay: 0.045, gain: 0.076, type: "triangle" }),
+    Object.freeze({ frequency: 360, frequencyEnd: 410, duration: 0.055, delay: 0, gain: 0.05, type: "sine" }),
+    Object.freeze({ frequency: 510, frequencyEnd: 560, duration: 0.065, delay: 0.038, gain: 0.047, type: "sine" }),
   ]),
   set: Object.freeze([
-    Object.freeze({ frequency: 1_250, frequencyEnd: 1_600, duration: 0.14, delay: 0, gain: 0.09, type: "triangle" }),
-    Object.freeze({ frequency: 2_100, frequencyEnd: 1_850, duration: 0.18, delay: 0.055, gain: 0.078, type: "triangle" }),
+    Object.freeze({ frequency: 470, frequencyEnd: 560, duration: 0.05, delay: 0, gain: 0.075, type: "triangle" }),
+    Object.freeze({ frequency: 760, frequencyEnd: 700, duration: 0.075, delay: 0.022, gain: 0.043, type: "sine" }),
   ]),
   saved: Object.freeze([
-    Object.freeze({ frequency: 1_050, frequencyEnd: 1_250, duration: 0.17, delay: 0, gain: 0.08, type: "triangle" }),
-    Object.freeze({ frequency: 1_650, frequencyEnd: 1_900, duration: 0.21, delay: 0.08, gain: 0.082, type: "triangle" }),
+    Object.freeze({ frequency: 523.25, frequencyEnd: 560, duration: 0.09, delay: 0, gain: 0.055, type: "sine" }),
+    Object.freeze({ frequency: 783.99, frequencyEnd: 820, duration: 0.13, delay: 0.065, gain: 0.052, type: "sine" }),
   ]),
   complete: Object.freeze([
-    Object.freeze({ frequency: 950, frequencyEnd: 1_100, duration: 0.19, delay: 0, gain: 0.078, type: "triangle" }),
-    Object.freeze({ frequency: 1_350, frequencyEnd: 1_550, duration: 0.22, delay: 0.11, gain: 0.08, type: "triangle" }),
-    Object.freeze({ frequency: 1_850, frequencyEnd: 2_150, duration: 0.26, delay: 0.22, gain: 0.084, type: "triangle" }),
+    Object.freeze({ frequency: 392, frequencyEnd: 415, duration: 0.11, delay: 0, gain: 0.05, type: "sine" }),
+    Object.freeze({ frequency: 523.25, frequencyEnd: 545, duration: 0.13, delay: 0.075, gain: 0.052, type: "sine" }),
+    Object.freeze({ frequency: 659.25, frequencyEnd: 690, duration: 0.18, delay: 0.15, gain: 0.055, type: "sine" }),
   ]),
   unlock: Object.freeze([
-    Object.freeze({ frequency: 1_000, frequencyEnd: 1_200, duration: 0.17, delay: 0, gain: 0.076, type: "triangle" }),
-    Object.freeze({ frequency: 1_500, frequencyEnd: 1_750, duration: 0.21, delay: 0.09, gain: 0.08, type: "triangle" }),
-    Object.freeze({ frequency: 2_050, frequencyEnd: 2_350, duration: 0.24, delay: 0.19, gain: 0.08, type: "triangle" }),
+    Object.freeze({ frequency: 440, frequencyEnd: 470, duration: 0.09, delay: 0, gain: 0.052, type: "sine" }),
+    Object.freeze({ frequency: 659.25, frequencyEnd: 700, duration: 0.13, delay: 0.06, gain: 0.055, type: "sine" }),
+    Object.freeze({ frequency: 880, frequencyEnd: 920, duration: 0.16, delay: 0.13, gain: 0.048, type: "sine" }),
   ]),
   partial: Object.freeze([
-    Object.freeze({ frequency: 1_300, frequencyEnd: 1_100, duration: 0.18, delay: 0, gain: 0.082, type: "triangle" }),
-    Object.freeze({ frequency: 950, frequencyEnd: 800, duration: 0.24, delay: 0.1, gain: 0.08, type: "triangle" }),
+    Object.freeze({ frequency: 440, frequencyEnd: 420, duration: 0.09, delay: 0, gain: 0.052, type: "sine" }),
+    Object.freeze({ frequency: 329.63, frequencyEnd: 310, duration: 0.14, delay: 0.075, gain: 0.048, type: "triangle" }),
   ]),
   error: Object.freeze([
-    Object.freeze({ frequency: 1_050, frequencyEnd: 850, duration: 0.19, delay: 0, gain: 0.09, type: "triangle" }),
-    Object.freeze({ frequency: 900, frequencyEnd: 700, duration: 0.25, delay: 0.11, gain: 0.086, type: "triangle" }),
-  ]),
-  test: Object.freeze([
-    Object.freeze({ frequency: 1_200, frequencyEnd: 1_500, duration: 0.22, delay: 0, gain: 0.082, type: "triangle" }),
-    Object.freeze({ frequency: 1_650, frequencyEnd: 1_950, duration: 0.22, delay: 0.26, gain: 0.084, type: "triangle" }),
-    Object.freeze({ frequency: 2_050, frequencyEnd: 2_350, duration: 0.3, delay: 0.52, gain: 0.086, type: "triangle" }),
+    Object.freeze({ frequency: 290, frequencyEnd: 255, duration: 0.1, delay: 0, gain: 0.06, type: "triangle" }),
+    Object.freeze({ frequency: 235, frequencyEnd: 205, duration: 0.14, delay: 0.08, gain: 0.052, type: "triangle" }),
   ]),
 });
 
@@ -280,9 +274,8 @@ function resumeAudioContext(context) {
 }
 
 function noteEnvelope(progress) {
-  const attack = Math.min(1, progress / 0.035);
-  const releaseProgress = Math.max(0, (progress - 0.7) / 0.3);
-  const release = Math.cos(Math.min(1, releaseProgress) * Math.PI * 0.5) ** 1.25;
+  const attack = Math.min(1, progress / 0.08);
+  const release = Math.pow(Math.max(0, 1 - progress), 2.3);
   return attack * release;
 }
 
@@ -293,7 +286,7 @@ function waveSample(type, phase) {
 
 export function renderToneSamples(kind, sampleRate = FALLBACK_SAMPLE_RATE) {
   const pattern = tonePattern(kind);
-  const endTime = Math.max(...pattern.map((note) => note.delay + note.duration)) + 0.025;
+  const endTime = Math.max(...pattern.map((note) => note.delay + note.duration)) + 0.018;
   const samples = new Float32Array(Math.ceil(endTime * sampleRate));
 
   for (const note of pattern) {
@@ -306,23 +299,13 @@ export function renderToneSamples(kind, sampleRate = FALLBACK_SAMPLE_RATE) {
       const frequency = note.frequency + ((note.frequencyEnd ?? note.frequency) - note.frequency) * progress;
       phase += (Math.PI * 2 * frequency) / sampleRate;
       const fundamental = waveSample(note.type, phase);
-      const secondHarmonic = Math.sin(phase * 2) * 0.18;
-      const thirdHarmonic = Math.sin(phase * 3) * 0.055;
-      samples[startIndex + offset] += (fundamental + secondHarmonic + thirdHarmonic)
-        * note.gain
-        * noteEnvelope(progress);
+      const harmonic = Math.sin(phase * 2) * 0.12;
+      samples[startIndex + offset] += (fundamental + harmonic) * note.gain * noteEnvelope(progress);
     }
   }
 
-  let rawPeak = 0;
-  for (const sample of samples) rawPeak = Math.max(rawPeak, Math.abs(sample));
-  if (rawPeak === 0) return samples;
-
-  const saturationPeak = Math.tanh(FALLBACK_SATURATION_DRIVE);
   for (let index = 0; index < samples.length; index += 1) {
-    const normalized = samples[index] / rawPeak;
-    samples[index] = (Math.tanh(normalized * FALLBACK_SATURATION_DRIVE) / saturationPeak)
-      * FALLBACK_TARGET_PEAK;
+    samples[index] = Math.max(-1, Math.min(1, samples[index] * FALLBACK_MASTER_GAIN * TONE_OUTPUT_GAIN));
   }
   return samples;
 }
@@ -478,85 +461,30 @@ function playFallbackToneWithResult(kind, timeoutMs) {
   });
 }
 
-function maximumConcurrentPatternGain(pattern) {
-  const checkpoints = pattern.flatMap((note) => [
-    note.delay,
-    note.delay + note.duration - Number.EPSILON,
-  ]);
-  return Math.max(...checkpoints.map((time) => pattern.reduce((total, note) => {
-    const active = time >= note.delay && time < note.delay + note.duration;
-    return total + (active ? note.gain : 0);
-  }, 0)));
-}
-
-function configurePeakLimiter(context, output, startAt) {
-  if (typeof context.createDynamicsCompressor !== "function") return null;
-  let limiter = null;
-  try {
-    limiter = context.createDynamicsCompressor();
-    limiter.threshold?.setValueAtTime?.(-0.5, startAt);
-    limiter.knee?.setValueAtTime?.(0, startAt);
-    limiter.ratio?.setValueAtTime?.(20, startAt);
-    limiter.attack?.setValueAtTime?.(0.001, startAt);
-    limiter.release?.setValueAtTime?.(0.06, startAt);
-    limiter.connect(output);
-    return limiter;
-  } catch {
-    try {
-      limiter?.disconnect();
-    } catch {
-      // The deterministic mix bound remains safe without the optional limiter.
-    }
-    return null;
-  }
-}
-
-function scheduleNoteEnvelope(parameter, peak, noteStart, noteEnd) {
-  const attackEnd = noteStart + Math.min(0.008, (noteEnd - noteStart) * 0.08);
-  const releaseStart = noteStart + (noteEnd - noteStart) * 0.7;
-  parameter.setValueAtTime(0.0001, noteStart);
-  if (typeof parameter.linearRampToValueAtTime === "function") {
-    parameter.linearRampToValueAtTime(peak, attackEnd);
-  } else {
-    parameter.exponentialRampToValueAtTime(peak, attackEnd);
-  }
-  parameter.setValueAtTime(peak, releaseStart);
-  if (typeof parameter.linearRampToValueAtTime === "function") {
-    parameter.linearRampToValueAtTime(0.0001, noteEnd);
-  } else {
-    parameter.exponentialRampToValueAtTime(0.0001, noteEnd);
-  }
-}
-
 function scheduleWebAudioTone(context, kind) {
   if (context.state !== "running") return false;
   const startAt = context.currentTime + 0.008;
-  const pattern = tonePattern(kind);
-  const voiceGainScale = 1 / maximumConcurrentPatternGain(pattern);
   let output = null;
-  let limiter = null;
   let voice = null;
 
   try {
     output = context.createGain();
-    output.gain.setValueAtTime(WEB_AUDIO_MASTER_GAIN, startAt);
+    output.gain.setValueAtTime(1, startAt);
     output.connect(context.destination);
     replaceActiveWebAudioTone(context);
-    limiter = configurePeakLimiter(context, output, startAt);
 
     voice = {
       context,
       disposed: false,
       gains: [],
-      limiter,
       oscillators: [],
       output,
-      outputLevel: WEB_AUDIO_MASTER_GAIN,
-      remaining: pattern.length,
+      outputLevel: 1,
+      remaining: tonePattern(kind).length,
     };
     activeWebAudioTone = voice;
 
-    for (const note of pattern) {
+    for (const note of tonePattern(kind)) {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       const noteStart = startAt + note.delay;
@@ -567,9 +495,11 @@ function scheduleWebAudioTone(context, kind) {
       if (note.frequencyEnd && typeof oscillator.frequency.exponentialRampToValueAtTime === "function") {
         oscillator.frequency.exponentialRampToValueAtTime(note.frequencyEnd, noteEnd);
       }
-      scheduleNoteEnvelope(gain.gain, note.gain * voiceGainScale, noteStart, noteEnd);
+      gain.gain.setValueAtTime(0.0001, noteStart);
+      gain.gain.exponentialRampToValueAtTime(note.gain * TONE_OUTPUT_GAIN, noteStart + Math.min(0.009, note.duration / 4));
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
       oscillator.connect(gain);
-      gain.connect(limiter ?? output);
+      gain.connect(output);
       voice.gains.push(gain);
       voice.oscillators.push(oscillator);
       oscillator.onended = () => {
@@ -578,7 +508,6 @@ function scheduleWebAudioTone(context, kind) {
         gain.disconnect();
         voice.remaining -= 1;
         if (voice.remaining === 0) {
-          limiter?.disconnect();
           output.disconnect();
           if (activeWebAudioTone === voice) activeWebAudioTone = null;
         }
@@ -609,11 +538,6 @@ function scheduleWebAudioTone(context, kind) {
         } catch {
           // A failed node may never have connected.
         }
-      }
-      try {
-        voice.limiter?.disconnect();
-      } catch {
-        // A partially created limiter may never have connected.
       }
     }
     try {
@@ -667,20 +591,20 @@ export async function playInterfaceTestTone(enabled = true) {
   configurePlaybackAudioSession();
 
   if (prefersMediaElementPlayback()) {
-    return playFallbackToneWithResult("test", AUDIO_TEST_PLAY_TIMEOUT_MS);
+    return playFallbackToneWithResult("complete", AUDIO_TEST_PLAY_TIMEOUT_MS);
   }
   const context = getAudioContext();
-  if (!context) return playFallbackToneWithResult("test", AUDIO_TEST_PLAY_TIMEOUT_MS);
+  if (!context) return playFallbackToneWithResult("complete", AUDIO_TEST_PLAY_TIMEOUT_MS);
   if (context.state === "running") {
-    return scheduleWebAudioTone(context, "test")
-      || playFallbackToneWithResult("test", AUDIO_TEST_PLAY_TIMEOUT_MS);
+    return scheduleWebAudioTone(context, "complete")
+      || playFallbackToneWithResult("complete", AUDIO_TEST_PLAY_TIMEOUT_MS);
   }
 
-  const fallbackResult = playFallbackToneWithResult("test", AUDIO_TEST_PLAY_TIMEOUT_MS);
+  const fallbackResult = playFallbackToneWithResult("complete", AUDIO_TEST_PLAY_TIMEOUT_MS);
   const resumeResult = resumeAudioContext(context);
   if (await fallbackResult) return true;
   if (!(await resumeResult)) return false;
-  return scheduleWebAudioTone(context, "test");
+  return scheduleWebAudioTone(context, "complete");
 }
 
 export function resetInterfaceAudioAfterBackground() {

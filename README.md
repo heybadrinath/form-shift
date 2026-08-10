@@ -16,7 +16,7 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 - Stores occasional body-weight measurements and uses an explicit select-then-edit flow so inspecting an entry cannot silently put the form into edit mode.
 - Includes a searchable 76-item Food Index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit, backed by 10 generic family guides.
 - Compares up to four food portions against rough energy and protein references without turning the comparison into a prescribed meal plan.
-- Provides high-output interaction tones, an explicit loud-speaker test, a persistent sound toggle, and strong best-effort haptics on browsers that expose device vibration.
+- Provides short interaction tones in the original sound palette, an explicit speaker test, a persistent sound toggle, and strong best-effort haptics on browsers that expose device vibration.
 - Adapts from a desktop dashboard to a focused mobile runner and fixed bottom navigation.
 
 ## Screenshots
