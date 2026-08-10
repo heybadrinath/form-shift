@@ -16,7 +16,7 @@
   gap: 14px;
   padding: 12px 14px;
   border-radius: 22px;
-  background: var(--raised-ink);
+  background: var(--ink-raised);
 }
 
 .session-v2__icon-button,
@@ -66,7 +66,7 @@
   margin-top: 10px;
   padding: 13px 16px;
   border-radius: 19px;
-  background: var(--raised-ink);
+  background: var(--ink-raised);
 }
 
 .session-v2__progress > div:first-child {
@@ -324,7 +324,7 @@
   align-self: start;
   padding: 15px;
   border-radius: 27px;
-  background: var(--raised-ink);
+  background: var(--ink-raised);
 }
 
 .session-v2__runway-heading {
@@ -397,6 +397,11 @@
   place-items: center;
   padding: 20px;
   background: rgba(20, 20, 19, 0.86);
+  overscroll-behavior: contain;
+}
+
+body:has(.session-v2__modal-backdrop) {
+  overflow: hidden;
 }
 
 .session-v2__image-modal,
@@ -450,7 +455,7 @@
 }
 
 @media (max-width: 560px) {
-  .session-v2__topbar { position: sticky; z-index: 8; top: 0; border-radius: 18px; }
+  .session-v2__topbar { position: sticky; z-index: 8; top: 68px; border-radius: 18px; }
   .session-v2__identity strong { font-size: 0.8rem; }
   .session-v2__identity span { font-size: 0.56rem; }
   .session-v2__clock { padding: 9px 10px; font-size: 0.66rem; }

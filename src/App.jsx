@@ -96,6 +96,7 @@ export function App() {
     const commit = () => {
       if (transitionRequestRef.current !== requestId) return;
       flushSync(() => setPage(nextPage));
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     };
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion && typeof document.startViewTransition === "function") {
@@ -153,10 +154,6 @@ export function App() {
       });
     return () => controller.abort();
   }, [applyBootstrap]);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [page]);
 
   useEffect(() => {
     if (authState !== "ready") return undefined;

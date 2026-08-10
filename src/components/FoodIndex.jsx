@@ -163,6 +163,7 @@ export function FoodIndex() {
   const [showCompare, setShowCompare] = useState(false);
   const [compareSelection, setCompareSelection] = useState({});
   const modalOriginRef = useRef(null);
+  const compareFallbackRef = useRef(null);
 
   useEffect(() => {
     if (!selectedFood && !showCompare) return undefined;
@@ -318,11 +319,14 @@ export function FoodIndex() {
     setShowCompare(false);
     const origin = modalOriginRef.current;
     modalOriginRef.current = null;
-    window.requestAnimationFrame(() => origin?.focus());
+    window.requestAnimationFrame(() => {
+      const focusTarget = origin?.isConnected ? origin : compareFallbackRef.current;
+      focusTarget?.focus();
+    });
   }
 
   return (
-    <div className="fi-page page-enter">
+    <div className={`fi-page page-enter${compareCount > 0 ? " has-compare-dock" : ""}`}>
       <section className="fi-hero" aria-labelledby="food-index-hero-title">
         <div className="fi-hero__copy">
           <div className="eyebrow light-kicker">
@@ -337,7 +341,7 @@ export function FoodIndex() {
             <button className="fi-button fi-button--paper" onClick={() => document.getElementById("food-library")?.scrollIntoView({ behavior: "smooth" })}>
               Browse {FOOD_ITEMS.length} entries <ArrowRight size={19} weight="bold" />
             </button>
-            <button className="fi-compare-link" onClick={openCompare}>
+            <button className="fi-compare-link" ref={compareFallbackRef} onClick={openCompare}>
               <Basket size={19} weight="fill" />
               Compare {compareCount > 0 ? `${compareCount}/${COMPARE_LIMIT}` : "portions"}
             </button>

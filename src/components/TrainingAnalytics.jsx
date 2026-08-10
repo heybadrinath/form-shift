@@ -78,6 +78,7 @@ export function TrainingAnalytics({
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const weightBarsRef = useRef(null);
   const interactionBusy = busy || submitting;
 
   const summary = useMemo(
@@ -127,6 +128,12 @@ export function TrainingAnalytics({
       setFormMessage("");
     }
   }, [selectedWeight, selectedWeightId, todayKey]);
+
+  useEffect(() => {
+    const chart = weightBarsRef.current;
+    if (!chart) return;
+    chart.scrollLeft = chart.scrollWidth;
+  }, [chartWeights.length, latestWeight?.entryKey]);
 
   function resetWeightForm({ clearSelection = false } = {}) {
     setEditingId(null);
@@ -274,6 +281,7 @@ export function TrainingAnalytics({
                 <span className="training-analytics-scale-max">{chartMaximum.toFixed(1)}</span>
                 <div
                   className="training-analytics-weight-bars"
+                  ref={weightBarsRef}
                   style={{ "--weight-entry-count": chartWeights.length }}
                 >
                   {chartWeights.map((entry) => {

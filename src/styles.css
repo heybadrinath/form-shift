@@ -35,7 +35,7 @@ html {
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 280px;
   min-height: 100vh;
   background: #cbd9d0;
   color: var(--ink);
@@ -192,6 +192,9 @@ a {
 }
 
 .wordmark {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
   padding: 8px 0;
   color: var(--paper);
   font-size: 0.78rem;
@@ -286,6 +289,29 @@ button.session-pill {
   color: rgba(247, 247, 242, 0.58);
   font-size: 0.61rem;
   font-weight: 700;
+}
+
+@media (max-width: 360px) {
+  .page-canvas {
+    padding: 8px 8px 96px;
+  }
+
+  .mobile-nav {
+    right: 8px;
+    left: 8px;
+    gap: 3px;
+    padding: 5px;
+    border-radius: 20px;
+  }
+
+  .mobile-nav button {
+    gap: 3px;
+    min-height: 54px;
+    padding: 6px 1px 4px;
+    border-radius: 15px;
+    font-size: 0.58rem;
+  }
+
 }
 
 .mobile-nav button.is-active {
@@ -2117,6 +2143,13 @@ h3 {
   color: var(--coral);
   font-size: 0.68rem;
   font-weight: 800;
+}
+
+@media (max-width: 360px) {
+  .workout-hero {
+    min-height: 540px;
+    padding: 20px;
+  }
 }
 
 @media (min-width: 640px) {

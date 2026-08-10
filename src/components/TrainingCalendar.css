@@ -936,6 +936,79 @@ button.history-calendar-record:hover {
 }
 
 @media (max-width: 520px) {
+  .history-calendar-hero {
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .history-calendar-kicker {
+    font-size: 0.58rem;
+  }
+
+  .history-calendar-hero__copy h1 {
+    margin: 12px 0 11px;
+    font-size: clamp(2.65rem, 13vw, 3.2rem);
+  }
+
+  .history-calendar-hero__copy p {
+    font-size: 0.76rem;
+    line-height: 1.52;
+  }
+
+  .history-calendar-hero__score {
+    min-height: 150px;
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .history-calendar-hero__score > strong {
+    font-size: clamp(4rem, 20vw, 5rem);
+  }
+
+  .history-calendar-hero__score > small {
+    margin-top: 6px;
+  }
+
+  .history-calendar-hero__score > div {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+
+  .history-calendar-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .history-calendar-summary-card:first-child {
+    display: none;
+  }
+
+  .history-calendar-summary-card {
+    min-height: 108px;
+    padding: 11px 9px;
+    border-radius: 18px;
+  }
+
+  .history-calendar-summary-card > span {
+    gap: 4px;
+    font-size: 0.58rem;
+  }
+
+  .history-calendar-summary-card > strong {
+    margin-top: 14px;
+    font-size: 2.35rem;
+  }
+
+  .history-calendar-summary-card > small {
+    margin-top: 7px;
+    font-size: 0.6rem;
+  }
+
+  .history-calendar-summary-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 96px;
+  }
+
   .history-calendar-legend {
     flex-wrap: wrap;
     row-gap: 6px;
@@ -979,6 +1052,10 @@ button.history-calendar-record:hover {
   .history-calendar-session-filter select,
   .history-calendar-clear-filters {
     min-height: 48px;
+  }
+
+  .history-calendar-session-filter select {
+    font-size: 16px;
   }
 
   .history-calendar-readout {
