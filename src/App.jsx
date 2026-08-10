@@ -376,7 +376,8 @@ export function App() {
     setSoundEnabled(nextEnabled);
     writeSoundPreference(nextEnabled);
     if (nextEnabled) {
-      primeInterfaceAudio(true).then(() => playInterfaceTone("unlock", true));
+      void primeInterfaceAudio(true);
+      playInterfaceTone("unlock", true);
       showSyncNotice("saved", "Interface sounds on", 1500);
     } else {
       showSyncNotice("saved", "Interface sounds muted", 1500);

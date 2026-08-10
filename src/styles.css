@@ -41,7 +41,7 @@ html {
 
 body {
   margin: 0;
-  min-width: 280px;
+  min-width: 0;
   min-height: 100vh;
   background: #cbd9d0;
   color: var(--ink);
@@ -2850,4 +2850,52 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .app-loading > span,
   .app-loading > i > b { animation: none; }
+}
+
+@media (max-width: 300px) {
+  .utility-header {
+    padding-inline: 6px;
+  }
+
+  .header-context {
+    gap: 3px;
+  }
+
+  .wordmark {
+    flex: 0 0 44px;
+    justify-content: center;
+    padding: 0;
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  .wordmark span {
+    display: none;
+  }
+
+  .wordmark::after {
+    color: var(--paper);
+    content: "F/S";
+    font: 600 0.72rem/1 var(--data);
+    letter-spacing: 0.1em;
+  }
+
+  .hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hero-stats > div {
+    min-width: 0;
+    padding-right: 6px;
+  }
+
+  .hero-stats > div + div {
+    padding-left: 6px;
+  }
+
+  .hero-stats strong {
+    font-size: 1.42rem;
+    line-height: 0.9;
+    white-space: normal;
+  }
 }

@@ -1,6 +1,8 @@
 const STORAGE_KEY = "form-shift:sound-enabled";
 const FALLBACK_SAMPLE_RATE = 24_000;
 const FALLBACK_MASTER_GAIN = 0.92;
+const TONE_OUTPUT_GAIN = 2.4;
+const AUDIO_RESUME_TIMEOUT_MS = 250;
 
 const tonePatterns = Object.freeze({
   tap: Object.freeze([
@@ -41,7 +43,6 @@ const tonePatterns = Object.freeze({
 let audioContext = null;
 let fallbackAudio = null;
 let fallbackPlaybackId = 0;
-let pendingToneId = 0;
 let resumePromise = null;
 let lastTapAt = 0;
 const fallbackUriCache = new Map();
@@ -111,16 +112,24 @@ function resumeAudioContext(context) {
   try {
     if (context.state === "running") return Promise.resolve(true);
     if (context.state === "closed" || typeof context.resume !== "function") {
-      return Promise.resolve(context.state !== "closed");
+      return Promise.resolve(false);
     }
     createSilentSource(context);
-    resumePromise = Promise.resolve(context.resume())
-      .then(() => context.state !== "closed")
-      .catch(() => false)
+    const resumeAttempt = Promise.resolve(context.resume())
+      .then(() => context.state === "running")
+      .catch(() => false);
+    let timeoutId;
+    const timeout = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve(false), AUDIO_RESUME_TIMEOUT_MS);
+    });
+    let boundedResume;
+    boundedResume = Promise.race([resumeAttempt, timeout])
       .finally(() => {
-        resumePromise = null;
+        clearTimeout(timeoutId);
+        if (resumePromise === boundedResume) resumePromise = null;
       });
-    return resumePromise;
+    resumePromise = boundedResume;
+    return boundedResume;
   } catch {
     return Promise.resolve(false);
   }
@@ -158,7 +167,7 @@ export function renderToneSamples(kind, sampleRate = FALLBACK_SAMPLE_RATE) {
   }
 
   for (let index = 0; index < samples.length; index += 1) {
-    samples[index] = Math.max(-1, Math.min(1, samples[index] * FALLBACK_MASTER_GAIN));
+    samples[index] = Math.max(-1, Math.min(1, samples[index] * FALLBACK_MASTER_GAIN * TONE_OUTPUT_GAIN));
   }
   return samples;
 }
@@ -289,7 +298,7 @@ function scheduleWebAudioTone(context, kind) {
         oscillator.frequency.exponentialRampToValueAtTime(note.frequencyEnd, noteEnd);
       }
       gain.gain.setValueAtTime(0.0001, noteStart);
-      gain.gain.exponentialRampToValueAtTime(note.gain, noteStart + Math.min(0.009, note.duration / 4));
+      gain.gain.exponentialRampToValueAtTime(note.gain * TONE_OUTPUT_GAIN, noteStart + Math.min(0.009, note.duration / 4));
       gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
       oscillator.connect(gain);
       gain.connect(context.destination);
@@ -329,23 +338,18 @@ export function playInterfaceTone(kind, enabled = true) {
     lastTapAt = now;
   }
   const context = getAudioContext();
-  const toneId = pendingToneId + 1;
-  pendingToneId = toneId;
 
   if (!context) return playFallbackTone(kind);
   if (context.state === "running") {
     return scheduleWebAudioTone(context, kind) || playFallbackTone(kind);
   }
 
-  resumeAudioContext(context).then((ready) => {
-    if (pendingToneId !== toneId) return;
-    if (!ready || !scheduleWebAudioTone(context, kind)) playFallbackTone(kind);
-  });
-  return true;
+  const fallbackStarted = playFallbackTone(kind);
+  void resumeAudioContext(context);
+  return fallbackStarted;
 }
 
 export function resetInterfaceAudioAfterBackground() {
-  pendingToneId += 1;
   resumePromise = null;
   const context = audioContext;
   audioContext = null;
@@ -354,11 +358,15 @@ export function resetInterfaceAudioAfterBackground() {
   }
 
   fallbackPlaybackId += 1;
-  if (fallbackAudio) {
+  const staleFallbackAudio = fallbackAudio;
+  fallbackAudio = null;
+  if (staleFallbackAudio) {
     try {
-      fallbackAudio.pause();
-      fallbackAudio.currentTime = 0;
-      fallbackAudio.volume = 1;
+      staleFallbackAudio.pause();
+      staleFallbackAudio.currentTime = 0;
+      staleFallbackAudio.volume = 1;
+      staleFallbackAudio.removeAttribute?.("src");
+      staleFallbackAudio.load?.();
     } catch {
       // Background recovery remains best effort and must never affect the app.
     }

@@ -41,7 +41,7 @@ test("fallback tones render valid bounded audio and WAV data", () => {
     const samples = renderToneSamples(kind);
     assert.ok(samples.length > 500);
     assert.ok(samples.every((sample) => Number.isFinite(sample) && Math.abs(sample) <= 1));
-    assert.ok(samples.some((sample) => Math.abs(sample) > 0.001));
+    assert.ok(samples.some((sample) => Math.abs(sample) > 0.08));
     assert.match(interfaceToneDataUri(kind), /^data:audio\/wav;base64,UklGR/);
   }
 });
@@ -61,10 +61,11 @@ test("mutation keys resolve to short journal-wide status labels", () => {
   assert.equal(mutationStatusLabel(null), "");
 });
 
-test("a suspended audio context waits for resume before scheduling a tone", async () => {
+test("a suspended audio context plays an immediate fallback while preparing Web Audio", async () => {
   const previousWindow = globalThis.window;
   let completeResume;
   let oscillatorStarts = 0;
+  let audibleFallbacks = 0;
 
   class SuspendedAudioContext {
     constructor() {
@@ -110,14 +111,75 @@ test("a suspended audio context waits for resume before scheduling a tone", asyn
     }
   }
 
-  globalThis.window = { AudioContext: SuspendedAudioContext };
+  class AudioFallback {
+    constructor() {
+      this.volume = 1;
+    }
+
+    pause() {}
+
+    play() {
+      if (this.volume > 0) audibleFallbacks += 1;
+      return Promise.resolve();
+    }
+  }
+
+  globalThis.window = { AudioContext: SuspendedAudioContext, Audio: AudioFallback };
   try {
     const feedback = await import(`../src/interfaceFeedback.js?suspended=${Date.now()}`);
+    const priming = feedback.primeInterfaceAudio(true);
     assert.equal(feedback.playInterfaceTone("saved"), true);
+    assert.equal(audibleFallbacks, 1);
     assert.equal(oscillatorStarts, 0);
     completeResume();
-    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(await priming, true);
+    assert.equal(oscillatorStarts, 0);
+    assert.equal(feedback.playInterfaceTone("saved"), true);
     assert.equal(oscillatorStarts, 2);
+    assert.equal(audibleFallbacks, 1);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
+test("a stalled AudioContext resume cannot block priming or future retries", async () => {
+  const previousWindow = globalThis.window;
+  let resumeCalls = 0;
+
+  class HangingAudioContext {
+    constructor() {
+      this.state = "suspended";
+      this.sampleRate = 24_000;
+      this.destination = {};
+    }
+
+    createBuffer() {
+      return {};
+    }
+
+    createBufferSource() {
+      return { connect() {}, start() {} };
+    }
+
+    resume() {
+      resumeCalls += 1;
+      return new Promise(() => {});
+    }
+  }
+
+  globalThis.window = { AudioContext: HangingAudioContext };
+  try {
+    const feedback = await import(`../src/interfaceFeedback.js?stalled=${Date.now()}`);
+    const result = await Promise.race([
+      feedback.primeInterfaceAudio(true),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("audio priming did not settle")), 1_000)),
+    ]);
+    assert.equal(result, false);
+    assert.equal(resumeCalls, 1);
+
+    void feedback.primeInterfaceAudio(true);
+    assert.equal(resumeCalls, 2);
   } finally {
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;
@@ -153,6 +215,7 @@ test("background recovery closes a stale context and creates a fresh one", async
   let constructions = 0;
   let closes = 0;
   let starts = 0;
+  let fallbackConstructions = 0;
 
   class RunningAudioContext {
     constructor() {
@@ -187,15 +250,32 @@ test("background recovery closes a stale context and creates a fresh one", async
     }
   }
 
-  globalThis.window = { AudioContext: RunningAudioContext };
+  class AudioFallback {
+    constructor() {
+      fallbackConstructions += 1;
+    }
+
+    pause() {}
+
+    play() {
+      return Promise.resolve();
+    }
+
+    load() {}
+  }
+
+  globalThis.window = { AudioContext: RunningAudioContext, Audio: AudioFallback };
   try {
     const feedback = await import(`../src/interfaceFeedback.js?background=${Date.now()}`);
+    await feedback.primeInterfaceAudio();
     feedback.playInterfaceTone("saved");
     feedback.resetInterfaceAudioAfterBackground();
+    await feedback.primeInterfaceAudio();
     feedback.playInterfaceTone("saved");
     assert.equal(constructions, 2);
     assert.equal(closes, 1);
     assert.equal(starts, 4);
+    assert.equal(fallbackConstructions, 2);
   } finally {
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;
