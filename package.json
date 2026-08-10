@@ -18,6 +18,7 @@
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.mjs",
     "db:journal:reset": "node scripts/reset-owner-journal.mjs",
     "db:seed": "node scripts/seed-demo-data.mjs",
+    "db:seed:review": "node scripts/seed-demo-data.mjs --through-today",
     "db:seed:reset": "node scripts/seed-demo-data.mjs --reset"
   },
   "dependencies": {

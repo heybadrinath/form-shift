@@ -19,6 +19,12 @@ config({ path: ".env.local", quiet: true });
 config({ quiet: true });
 
 const resetOnly = process.argv.includes("--reset");
+const throughToday = process.argv.includes("--through-today");
+const supportedArguments = new Set(["--reset", "--through-today"]);
+const unknownArguments = process.argv.slice(2).filter((argument) => !supportedArguments.has(argument));
+if (unknownArguments.length || (resetOnly && throughToday)) {
+  throw new Error("Use either --reset or --through-today, with no other arguments.");
+}
 const db = getDatabase();
 
 const [removedSessions, removedWeights] = await db.batch([
@@ -41,7 +47,10 @@ const existingSessions = await db
   .select({ logicalDay: workoutSessions.logicalDay })
   .from(workoutSessions);
 
-const anchorDateKey = getLogicalDay(new Date());
+const anchorInstant = throughToday
+  ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+  : new Date();
+const anchorDateKey = getLogicalDay(anchorInstant);
 const seedData = omitOccupiedWorkoutDays(
   buildSeedData(anchorDateKey),
   existingSessions.map((session) => session.logicalDay),
@@ -56,6 +65,9 @@ if (insertions.length) await db.batch(insertions);
 
 const skippedDays = 25 - seedData.sessions.length;
 console.log(`Seeded ${seedData.sessions.length} sample sessions and ${seedData.weights.length} sample weight entries for ${anchorDateKey}.`);
+if (throughToday) {
+  console.log("Review mode includes the current logical day, so today's workout slot is temporarily occupied.");
+}
 if (skippedDays) {
   console.log(`Skipped ${skippedDays} workout days that already contained real sessions.`);
 }
