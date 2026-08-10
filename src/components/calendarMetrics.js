@@ -3,6 +3,82 @@ function nonNegativeNumber(value) {
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
+const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function weekdayFromDateKey(dateKey) {
+  if (typeof dateKey !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(value.getTime()) ? null : WEEKDAY_LABELS[value.getUTCDay()];
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
+}
+
+export function filterCalendarRecords(records = [], filters = {}) {
+  const safeRecords = Array.isArray(records) ? records : [];
+  const status = ["complete", "incomplete"].includes(filters.status)
+    ? filters.status
+    : "all";
+  const sessionId = typeof filters.sessionId === "string"
+    ? filters.sessionId.trim().toUpperCase()
+    : "ALL";
+
+  return safeRecords.filter((record) => {
+    if (status === "complete" && !record?.isComplete) return false;
+    if (status === "incomplete" && record?.isComplete) return false;
+    if (sessionId !== "ALL" && record?.sessionId !== sessionId) return false;
+    return true;
+  });
+}
+
+export function summarizeCalendarPatterns(records = []) {
+  const safeRecords = Array.isArray(records) ? records : [];
+  const activeDays = new Set(
+    safeRecords.map((record) => record?.logicalDateKey).filter(Boolean),
+  ).size;
+  const recordedDurations = safeRecords
+    .map((record) => Math.round(nonNegativeNumber(record?.durationMinutes)))
+    .filter((duration) => duration > 0);
+  const sessionCounts = new Map();
+  const weekdayCounts = new Map();
+
+  for (const record of safeRecords) {
+    if (record?.sessionId) {
+      sessionCounts.set(record.sessionId, (sessionCounts.get(record.sessionId) ?? 0) + 1);
+    }
+    const weekday = weekdayFromDateKey(record?.logicalDateKey);
+    if (weekday) weekdayCounts.set(weekday, (weekdayCounts.get(weekday) ?? 0) + 1);
+  }
+
+  function uniqueLeader(counts) {
+    if (!counts.size) return { label: null, count: 0, isTied: false };
+    const maximum = Math.max(...counts.values());
+    const leaders = [...counts.entries()]
+      .filter(([, count]) => count === maximum)
+      .map(([label]) => label);
+    return {
+      label: leaders.length === 1 ? leaders[0] : null,
+      count: maximum,
+      isTied: leaders.length > 1,
+    };
+  }
+
+  return {
+    activeDays,
+    typicalMinutes: median(recordedDurations),
+    recordedDurationCount: recordedDurations.length,
+    leadingSession: uniqueLeader(sessionCounts),
+    leadingWeekday: uniqueLeader(weekdayCounts),
+  };
+}
+
 export function summarizeCalendarRecords(records = []) {
   const safeRecords = Array.isArray(records) ? records : [];
   const sessions = safeRecords.length;

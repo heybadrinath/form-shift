@@ -20,7 +20,12 @@ import {
   sessionIdFromRequest,
   weightEntryIdFromRequest,
 } from "../http.js";
-import { getLogicalDay, toValidDate } from "../time.js";
+import {
+  getLogicalDay,
+  resolveLogicalDateMeasurement,
+  secondsUntilNextLogicalDay,
+  toValidDate,
+} from "../time.js";
 import {
   getWorkoutTemplate,
   listWorkoutTemplates,
@@ -94,18 +99,9 @@ function requestedMeasuredAt(value) {
   if (value === undefined || value === null || value === "") return new Date();
   try {
     const dateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
-    const measuredAt = toValidDate(
-      dateOnly ? `${value}T12:00:00+05:30` : value,
-      "measuredAt",
-    );
-    if (dateOnly && getLogicalDay(measuredAt) !== value) {
-      throw new AppError(
-        "validation_error",
-        "measuredAt must contain a real calendar date.",
-        422,
-        { field: "measuredAt" },
-      );
-    }
+    const measuredAt = dateOnly
+      ? resolveLogicalDateMeasurement(value)
+      : toValidDate(value, "measuredAt");
     if (measuredAt.getTime() > Date.now() + 5 * 60 * 1000) {
       throw new AppError(
         "validation_error",
@@ -137,11 +133,14 @@ export async function handleUnlock(request) {
       throw new AppError("invalid_credentials", "The PIN is incorrect.", 401);
     }
 
-    const token = createAuthToken(secret);
+    const now = new Date();
+    const ttlSeconds = secondsUntilNextLogicalDay(now);
+    const token = createAuthToken(secret, { nowMs: now.getTime(), ttlSeconds });
     return json({ authenticated: true }, {
       headers: {
         "Set-Cookie": buildAuthCookie(token, {
           secure: secureCookieForRequest(request),
+          maxAgeSeconds: ttlSeconds,
         }),
       },
     });

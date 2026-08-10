@@ -10,23 +10,22 @@ The app is intentionally narrow: it helps one person execute the next workout cl
 - Guides every exercise with sets, repetitions, effort targets, equipment notes, written form cues, and a four-panel instruction image.
 - Supports 20 exercise families, 30 equipment variants, and 30 dedicated instruction assets.
 - Records individual set completion, exercise completion, exercise skips, variant choices, session start/end times, and incomplete sessions.
-- Keeps one active workout resumable after reload or browser closure.
-- Shows a calendar and analytics view derived from saved workout history.
-- Maps the current week's completed resistance and core sets across 12 front/back body regions, with direct work, supporting work, and training-day counts shown separately.
-- Stores occasional body-weight measurements and supports adding or editing entries from Analytics.
-- Includes a searchable food index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit.
+- Keeps one active workout resumable after reload, browser sleep, or browser closure.
+- Shows a filterable Calendar with monthly totals, status/session filters, pattern readouts, weekly activity, and day-level workout details.
+- Maps the current week's completed resistance and core sets across 12 selectable front/back body regions, with weighted exposure, direct work, supporting work, and training-day counts shown separately.
+- Stores occasional body-weight measurements and uses an explicit select-then-edit flow so inspecting an entry cannot silently put the form into edit mode.
+- Includes a searchable 76-item Food Index for no-cook combinations, simple pan recipes, fruit and vegetables, protein add-ons, and foods to limit, backed by 10 generic family guides.
 - Compares up to four food portions against rough energy and protein references without turning the comparison into a prescribed meal plan.
+- Provides subtle interaction tones with a persistent, accessible sound toggle; the preference stays in the current browser and can be muted at any time.
 - Adapts from a desktop dashboard to a focused mobile runner and fixed bottom navigation.
 
 ## Screenshots
 
-These representative captures come from an authenticated browser QA pass. They show the desktop dashboard and the mobile runner, food index, and analytics views; the Calendar and mobile Analytics layouts have since received additional density and interaction refinements.
+These are the canonical 2026-08-10 captures from the final desktop and mobile browser comparison. The protected journal was empty when the final release state was verified; the screenshots therefore show the real first-workout experience rather than seeded analytics.
 
-![Current desktop workout dashboard](./docs/screenshots/dashboard-desktop.png)
+![Current desktop workout dashboard](./docs/screenshots/design-qa-workouts-desktop-viewport-2026-08-10.png)
 
-| Mobile workout runner | Mobile food index | Mobile analytics |
-| --- | --- | --- |
-| ![Current mobile workout runner](./docs/screenshots/session-mobile.png) | ![Current mobile food index](./docs/screenshots/food-mobile.png) | ![Current mobile training analytics](./docs/screenshots/analytics-mobile.png) |
+![Current mobile workout dashboard](./docs/screenshots/design-qa-workouts-mobile-viewport-2026-08-10.png)
 
 ## Architecture
 
@@ -45,7 +44,7 @@ Drizzle ORM + Neon serverless driver
 Neon Postgres
 ```
 
-The owner PIN is submitted only to the same-origin unlock function; it is not bundled into or returned to the client. The cookie-signing secret and database connection string remain server-side. Vercel Functions use Web `Request` and `Response` semantics, and the client sends the signed authentication cookie only to the same origin.
+The four-digit owner PIN is entered with the app's on-screen keypad and submitted only to the same-origin unlock function; it is not bundled into or returned to the client. The cookie-signing secret and database connection string remain server-side. Vercel Functions use Web `Request` and `Response` semantics, and the client sends the signed authentication cookie only to the same origin. The signed access cookie expires at the next 04:00 Chennai workout-day boundary, so the owner unlocks once each day.
 
 Postgres enforces the two most important workout rules:
 
@@ -80,7 +79,7 @@ Fill the three placeholders in `.env.local`:
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Neon pooled Postgres connection string |
-| `OWNER_PIN` | Private 4–12 digit PIN used by the owner gate |
+| `OWNER_PIN` | Private four-digit PIN used by the on-screen owner gate |
 | `AUTH_COOKIE_SECRET` | Independent random signing secret with at least 32 characters |
 
 Never commit `.env.local`. The repository ignores `.env` files except for the safe `.env.example` template.
@@ -92,14 +91,6 @@ npm run db:migrate
 ```
 
 This applies the checked-in migrations from `drizzle/`. Use `npm run db:generate` only after intentionally changing `server/db/schema.js`.
-
-For a populated local or review environment, the repository also includes an idempotent sample-data script:
-
-```bash
-npm run db:seed
-```
-
-It adds several weeks of clearly identified workout sessions and weight entries without replacing existing workout days. Running it again refreshes only those sample rows. Remove the sample rows later with `npm run db:seed:reset`; neither command deletes genuine journal entries.
 
 ### 4. Start the full app locally
 
@@ -121,7 +112,7 @@ Run the complete automated test suite:
 npm test
 ```
 
-The test command covers action single-flight behavior, Calendar metrics, weekly muscle-exposure classification, deterministic seed relationships, history calculations, authentication and signed cookies, the 04:00 logical-day boundary, workout invariants, workout-history shaping, template variants, schema safeguards, API authentication, and static-hosting packaging.
+The test command covers action single-flight behavior, sound-preference persistence, Calendar filtering and metrics, weekly muscle-exposure classification, history calculations, daily authentication and signed-cookie expiry at the 04:00 boundary, server-safe date-only weight handling, workout invariants, workout-history shaping, template variants, journal-reset safeguards, schema safeguards, API authentication, and static-hosting packaging.
 
 Build the production assets with:
 
@@ -149,9 +140,14 @@ tests/               Node test suites
 
 - Authentication is a single-owner PIN, not a multi-user account system.
 - The workout journal, workout history, and weight entries are persistent. The food quick-compare tray is intentionally temporary and clears on reload.
+- The sound preference persists only in the current browser; it is not owner data and is not synchronized between devices.
 - The runner shows overall elapsed session time and written rest guidance. It does not run a rest countdown.
 - Muscle exposure is a completed-set distribution, not load-based training volume, recovery advice, or evidence of muscle growth.
 - Food energy and protein values are approximate references, not a personalized daily prescription.
 - Exercise illustrations support the written cues; they are not a substitute for a qualified coach or clinical assessment when pain or injury symptoms are present.
+
+## 2026-08-10 release state
+
+Temporary authenticated QA rows were permanently removed after the final browser pass. A separate read-only count check then confirmed that the configured production journal contained exactly 0 workout sessions, 0 workout exercises, 0 workout sets, and 0 weight entries. The schema, migrations, environment configuration, and owner authentication remained intact.
 
 See [PERSISTENCE.md](./PERSISTENCE.md) for the storage and API contract, [DESIGN_NOTES.md](./DESIGN_NOTES.md) for product-design decisions, and [design-qa.md](./design-qa.md) for the completed authenticated QA record.

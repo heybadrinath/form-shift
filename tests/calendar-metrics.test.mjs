@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildMonthWeekActivity,
+  filterCalendarRecords,
   summarizeCalendarMonth,
+  summarizeCalendarPatterns,
   summarizeCalendarRecords,
 } from "../src/components/calendarMetrics.js";
 import { buildMonthCells } from "../src/components/historyUtils.js";
@@ -99,5 +101,46 @@ test("returns a stable zero summary for missing records", () => {
     trainingMinutes: 0,
     averageHandled: 0,
     finishRate: 0,
+  });
+});
+
+test("filters by status and session without mutating the source records", () => {
+  assert.deepEqual(
+    filterCalendarRecords(records, { status: "incomplete", sessionId: "b" })
+      .map((record) => record.id),
+    ["two"],
+  );
+  assert.deepEqual(
+    filterCalendarRecords(records, { status: "complete", sessionId: "all" })
+      .map((record) => record.id),
+    ["one", "three", "outside"],
+  );
+  assert.equal(records.length, 5);
+});
+
+test("summarizes unique days, median recorded duration, and honest pattern ties", () => {
+  const result = summarizeCalendarPatterns([
+    ...records.slice(0, 3),
+    {
+      id: "same-day",
+      sessionId: "A",
+      logicalDateKey: "2026-08-09",
+      durationMinutes: 0,
+      isComplete: true,
+    },
+  ]);
+
+  assert.equal(result.activeDays, 3);
+  assert.equal(result.typicalMinutes, 45);
+  assert.equal(result.recordedDurationCount, 3);
+  assert.deepEqual(result.leadingSession, { label: "A", count: 2, isTied: false });
+  assert.deepEqual(result.leadingWeekday, { label: "Sunday", count: 3, isTied: false });
+
+  assert.deepEqual(summarizeCalendarPatterns([]), {
+    activeDays: 0,
+    typicalMinutes: 0,
+    recordedDurationCount: 0,
+    leadingSession: { label: null, count: 0, isTied: false },
+    leadingWeekday: { label: null, count: 0, isTied: false },
   });
 });

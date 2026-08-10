@@ -8,7 +8,7 @@
     "build": "vite build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "test": "npm run test:actions && npm run test:copy && npm run test:history && npm run test:exposure && npm run test:backend && npm run test:sites",
-    "test:actions": "node --test tests/async-action-gate.test.mjs",
+    "test:actions": "node --test tests/async-action-gate.test.mjs tests/daily-access.test.mjs tests/interface-feedback.test.mjs tests/journal-reconciliation.test.mjs",
     "test:copy": "node --test tests/persistence-copy.test.mjs",
     "test:history": "node --test tests/history-utils.test.mjs tests/calendar-metrics.test.mjs",
     "test:exposure": "node --test tests/muscle-exposure.test.mjs",
@@ -16,6 +16,7 @@
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "db:generate": "drizzle-kit generate --config=drizzle.config.mjs",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.mjs",
+    "db:journal:reset": "node scripts/reset-owner-journal.mjs",
     "db:seed": "node scripts/seed-demo-data.mjs",
     "db:seed:reset": "node scripts/seed-demo-data.mjs --reset"
   },

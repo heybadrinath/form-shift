@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import {
   AUTH_COOKIE_NAME,
+  AUTH_TOKEN_VERSION,
   buildAuthCookie,
   createAuthToken,
   parseCookies,
@@ -23,6 +25,29 @@ test("a signed owner token verifies until its expiry", () => {
     "fixed-test-nonce",
   );
   assert.equal(verifyAuthToken(token, secret, { nowMs: 1_700_000_060_000 }), null);
+});
+
+test("tokens from the former long-lived gate are rejected", () => {
+  const encodedPayload = Buffer.from(JSON.stringify({
+    version: AUTH_TOKEN_VERSION - 1,
+    issuedAt: 1_700_000_000,
+    expiresAt: 1_700_000_060,
+    nonce: "legacy-token",
+  })).toString("base64url");
+  const signature = createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+
+  assert.equal(verifyAuthToken(`${encodedPayload}.${signature}`, secret, {
+    nowMs: 1_700_000_030_000,
+  }), null);
+});
+
+test("signed owner tokens cannot outlive one logical day", () => {
+  const token = createAuthToken(secret, {
+    nowMs: 1_700_000_000_000,
+    ttlSeconds: 24 * 60 * 60 + 1,
+    nonce: "too-long",
+  });
+  assert.equal(verifyAuthToken(token, secret, { nowMs: 1_700_000_001_000 }), null);
 });
 
 test("tampering with a signed owner token is rejected", () => {

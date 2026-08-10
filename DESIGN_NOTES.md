@@ -4,31 +4,33 @@
 
 FORM / SHIFT is a private training journal for one beginner gym-goer using machines, dumbbells, cables, and bodyweight. The primary job is to remove decisions during training: choose the next prepared session, follow the ordered movements, record each set, and leave with an honest session record.
 
-The food index supports that job with practical references. It is intentionally an index rather than a meal schedule, food diary, or remaining-calorie prescription.
+The 76-item Food Index supports that job with practical references, while 10 generic family guides help classify food that is not named explicitly. It is intentionally an index rather than a meal schedule, food diary, or remaining-calorie prescription.
 
 ## Information architecture
 
 The four primary destinations are:
 
 1. **Workouts** — session selection, the rolling A–E system, exercise preview, and safety guardrails.
-2. **Food** — searchable food categories, detail views, rough portion coverage, and a temporary comparison tray.
-3. **Calendar** — logical-day training history and the detail of completed or incomplete sessions.
-4. **Analytics** — weekly frequency, recorded duration, completion, muscle exposure, session mix, recent history, and weight entries.
+2. **Food** — 76 searchable entries, 10 family-level choose/limit guides, detail views, rough portion coverage, and a temporary comparison tray.
+3. **Calendar** — logical-day training history, status/session filters, monthly and weekly readouts, and completed or incomplete session details.
+4. **Analytics** — weekly frequency, recorded duration, completion, 12-region muscle exposure, session mix, recent history, and explicit weight selection/editing.
 
 The Guide is contextual rather than a fifth primary destination. An active workout appears as a persistent continuation action outside the runner.
 
-The PIN gate protects all persistent owner data before the application shell opens. It communicates the single-owner model, not a multi-user sign-in product.
+The PIN gate protects all persistent owner data before the application shell opens. It communicates the single-owner model, not a multi-user sign-in product. A built-in four-digit keypad prevents the phone keyboard from covering the gate, and signed access expires at the next 04:00 Chennai workout-day boundary.
 
 ## Interaction model
 
 - Starting a session creates the server record before the runner opens.
 - Set checks, variant choices, and exercise skips save immediately.
-- Leaving the runner keeps the session active; the owner can continue it from any main destination or after reopening the app.
+- Leaving the runner keeps the session active; the owner can continue it from any main destination or after a reload, sleep/wake cycle, or browser reopen.
 - Completing the session requires every exercise to be completed or explicitly skipped.
 - Ending incomplete is an intentional escape hatch and preserves recorded work.
 - Only one session can be started in each 04:00-to-03:59 `Asia/Kolkata` logical day.
 - The runner shows overall elapsed time. Rest values remain guidance attached to each exercise; there is no rest countdown or alarm.
 - The food comparison tray is temporary and makes that boundary explicit.
+- Short tones acknowledge navigation, saved mutations, and errors without competing with the workout. A compact speaker control disables them, and that preference persists in the current browser.
+- Selecting a weight point is read-only. Editing begins only from the explicit **Edit weight** control, protecting against accidental form changes while inspecting the chart.
 
 ## Visual system
 
@@ -78,7 +80,7 @@ The images are instructional aids, not ground truth. Written cues remain authori
 - Progress treats both completed and explicitly skipped exercises as handled, while the summary preserves the difference.
 - Session and exercise timestamps are recorded in the background; the interface emphasizes the task rather than audit metadata.
 - Calendar and Analytics report only persisted outcomes. They do not infer load progression or repetitions that were never recorded.
-- The front/back muscle map colors 12 major regions from completed sets in ended workouts. Direct sets count once and supporting involvement counts half for the relative color score; the adjacent ledger preserves the raw direct, supporting, and training-day counts.
+- The selectable front/back muscle map colors 12 major regions from completed sets in ended workouts. Direct sets count once and supporting involvement counts half for the relative color score; the inspector and ranked ledger preserve the raw direct, supporting, and training-day counts for every region.
 - Muscle exposure is deliberately not labelled training volume, balance, stimulus, readiness, recovery, or growth. The active workout enters the map only after it is finished or ended.
 - Food estimates use ranges and state that the percentages are an orientation, not an instruction to compensate later.
 

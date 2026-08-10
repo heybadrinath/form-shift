@@ -63,9 +63,13 @@ export const appApi = {
     method: "POST",
     body: reason ? { reason } : {},
   }),
-  addWeight: ({ weightKg, measuredAt }) => requestJson("/api/weights", {
+  addWeight: ({ weightKg, measuredAt, date }) => requestJson("/api/weights", {
     method: "POST",
-    body: { weightKg, ...(measuredAt ? { measuredAt } : {}) },
+    body: {
+      weightKg,
+      ...(measuredAt ? { measuredAt } : {}),
+      ...(!measuredAt && date ? { date } : {}),
+    },
   }),
   updateWeight: (entryId, values) => requestJson(`/api/weights/${entryId}`, {
     method: "PUT",

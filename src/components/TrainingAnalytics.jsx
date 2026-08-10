@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Barbell,
+  CaretRight,
   ChartBar,
   CheckCircle,
   Clock,
+  Minus,
   PencilSimple,
   Plus,
   Scales,
@@ -66,13 +68,17 @@ export function TrainingAnalytics({
   onAddWeight,
   onEditWeight,
   logicalDayCutoffHour = 4,
+  busy = false,
 }) {
   const todayKey = toLocalDateKey(getLogicalNow(new Date(), logicalDayCutoffHour));
   const [weightDate, setWeightDate] = useState(todayKey);
   const [weightValue, setWeightValue] = useState("");
+  const [selectedWeightId, setSelectedWeightId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formMessage, setFormMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const interactionBusy = busy || submitting;
 
   const summary = useMemo(
     () => summarizeTraining(sessionHistory, new Date(), logicalDayCutoffHour),
@@ -87,6 +93,9 @@ export function TrainingAnalytics({
     [weightEntries, logicalDayCutoffHour],
   );
   const chartWeights = weights.slice(-10);
+  const selectedWeight = selectedWeightId
+    ? weights.find((entry) => entry.entryKey === selectedWeightId) ?? null
+    : null;
 
   const mixTotal = Object.values(summary.sessionMix).reduce((sum, count) => sum + count, 0);
   const mixMaximum = Math.max(1, ...Object.values(summary.sessionMix));
@@ -95,7 +104,7 @@ export function TrainingAnalytics({
   const chartChange = latestWeight && firstChartWeight ? latestWeight.weightKg - firstChartWeight.weightKg : 0;
   const chartMinimum = chartWeights.length ? Math.min(...chartWeights.map((entry) => entry.weightKg)) : 0;
   const chartMaximum = chartWeights.length ? Math.max(...chartWeights.map((entry) => entry.weightKg)) : 0;
-  const chartRange = Math.max(1, chartMaximum - chartMinimum);
+  const chartRange = chartMaximum - chartMinimum;
   const { startKey } = getWeekRange(new Date(), logicalDayCutoffHour);
   const weekStart = dateFromKey(startKey);
   const weeklyCounts = Array.from({ length: 7 }, (_, index) => {
@@ -109,14 +118,35 @@ export function TrainingAnalytics({
     };
   });
 
-  function resetWeightForm() {
+  useEffect(() => {
+    if (selectedWeightId && !selectedWeight) {
+      setSelectedWeightId(null);
+      setEditingId(null);
+      setWeightDate(todayKey);
+      setWeightValue("");
+      setFormMessage("");
+    }
+  }, [selectedWeight, selectedWeightId, todayKey]);
+
+  function resetWeightForm({ clearSelection = false } = {}) {
+    setEditingId(null);
+    setWeightDate(todayKey);
+    setWeightValue("");
+    setFormMessage("");
+    if (clearSelection) setSelectedWeightId(null);
+  }
+
+  function selectWeight(entry) {
+    setSelectedWeightId(entry.entryKey);
     setEditingId(null);
     setWeightDate(todayKey);
     setWeightValue("");
     setFormMessage("");
   }
 
-  function editWeight(entry) {
+  function editSelectedWeight() {
+    if (!selectedWeight) return;
+    const entry = selectedWeight;
     setEditingId(entry.entryKey);
     setWeightDate(entry.dateKey);
     setWeightValue(entry.weightKg.toFixed(1));
@@ -125,6 +155,8 @@ export function TrainingAnalytics({
 
   async function submitWeight(event) {
     event.preventDefault();
+    if (busy || submittingRef.current) return;
+
     const parsedWeight = Number(weightValue);
     if (!weightDate || !Number.isFinite(parsedWeight) || parsedWeight < MIN_BODY_WEIGHT_KG || parsedWeight > MAX_BODY_WEIGHT_KG) {
       setFormMessage(`Enter a date and a body weight between ${MIN_BODY_WEIGHT_KG} and ${MAX_BODY_WEIGHT_KG} kg.`);
@@ -133,10 +165,13 @@ export function TrainingAnalytics({
 
     const handler = editingId ? onEditWeight : onAddWeight;
     if (typeof handler !== "function") {
-      setFormMessage("Weight editing is not connected on this screen yet.");
+      setFormMessage(editingId
+        ? "Weight editing is not connected on this screen yet."
+        : "Weight logging is not connected on this screen yet.");
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     setFormMessage("");
     try {
@@ -149,6 +184,7 @@ export function TrainingAnalytics({
     } catch {
       setFormMessage("The entry was not updated. Try again.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -166,11 +202,16 @@ export function TrainingAnalytics({
             <span>This week</span>
             <strong>{summary.weeklyFrequency} sessions</strong>
           </div>
-          <div className="training-analytics-week__days" aria-label="Workout frequency by day this week">
+          <div className="training-analytics-week__days" role="list" aria-label="Workout frequency by day this week">
             {weeklyCounts.map((day) => (
-              <div className={day.count ? "has-workout" : ""} key={day.dateKey}>
-                <span>{day.label}</span>
-                <strong>{day.count || "·"}</strong>
+              <div
+                className={day.count ? "has-workout" : ""}
+                key={day.dateKey}
+                role="listitem"
+                aria-label={`${formatShortDate(day.dateKey, true)}: ${day.count} ${day.count === 1 ? "session" : "sessions"}`}
+              >
+                <span aria-hidden="true">{day.label}</span>
+                <strong aria-hidden="true">{day.count || "·"}</strong>
               </div>
             ))}
           </div>
@@ -221,7 +262,11 @@ export function TrainingAnalytics({
               <div className="training-analytics-weight-summary">
                 <span>Last {chartWeights.length} entries</span>
                 <strong className={chartChange < 0 ? "is-down" : chartChange > 0 ? "is-up" : ""}>
-                  {chartChange < 0 ? <TrendDown size={19} weight="bold" /> : <TrendUp size={19} weight="bold" />}
+                  {chartChange < 0
+                    ? <TrendDown size={19} weight="bold" />
+                    : chartChange > 0
+                      ? <TrendUp size={19} weight="bold" />
+                      : <Minus size={19} weight="bold" />}
                   {chartChange > 0 ? "+" : ""}{chartChange.toFixed(1)} kg
                 </strong>
               </div>
@@ -232,16 +277,20 @@ export function TrainingAnalytics({
                   style={{ "--weight-entry-count": chartWeights.length }}
                 >
                   {chartWeights.map((entry) => {
-                    const height = 18 + ((entry.weightKg - chartMinimum) / chartRange) * 72;
+                    const height = chartRange === 0
+                      ? 54
+                      : 18 + ((entry.weightKg - chartMinimum) / chartRange) * 72;
+                    const isSelected = selectedWeight?.entryKey === entry.entryKey;
                     return (
                       <button
                         type="button"
-                        className="training-analytics-weight-bar"
+                        className={`training-analytics-weight-bar${isSelected ? " is-selected" : ""}`}
                         style={{ "--weight-height": `${height}%` }}
                         key={entry.entryKey}
-                        onClick={() => editWeight(entry)}
-                        disabled={submitting}
-                        aria-label={`${entry.weightKg.toFixed(1)} kilograms on ${formatShortDate(entry.dateKey, true)}. Edit entry.`}
+                        onClick={() => selectWeight(entry)}
+                        disabled={interactionBusy}
+                        aria-pressed={isSelected}
+                        aria-label={`${entry.weightKg.toFixed(1)} kilograms on ${formatShortDate(entry.dateKey, true)}. ${isSelected ? "Selected." : "Select measurement."}`}
                       >
                         <i aria-hidden="true" />
                         <span>{formatShortDate(entry.dateKey)}</span>
@@ -259,10 +308,26 @@ export function TrainingAnalytics({
             </div>
           )}
 
-          <form className="training-analytics-weight-form" onSubmit={submitWeight} aria-busy={submitting}>
+          {selectedWeight ? (
+            <section className="training-analytics-weight-selection" aria-labelledby="selected-weight-title" aria-live="polite">
+              <div>
+                <span id="selected-weight-title">Selected measurement</span>
+                <strong>{selectedWeight.weightKg.toFixed(1)} kg</strong>
+                <small>{formatShortDate(selectedWeight.dateKey, true)} · read-only</small>
+              </div>
+              <button type="button" onClick={editSelectedWeight} disabled={interactionBusy || editingId === selectedWeight.entryKey}>
+                <PencilSimple size={17} weight="bold" />
+                {editingId === selectedWeight.entryKey ? "Editing" : "Edit weight"}
+              </button>
+            </section>
+          ) : weights.length ? (
+            <p className="training-analytics-weight-selection-hint">Select a chart point or recent measurement to inspect it. Editing starts only from the separate Edit weight action.</p>
+          ) : null}
+
+          <form className="training-analytics-weight-form" onSubmit={submitWeight} aria-busy={interactionBusy}>
             <div className="training-analytics-weight-form__title">
               <span>{editingId ? "Edit measurement" : "Add measurement"}</span>
-              {editingId && <button type="button" onClick={resetWeightForm} disabled={submitting} aria-label="Cancel editing weight"><X size={16} /></button>}
+              {editingId && <button type="button" onClick={() => resetWeightForm()} disabled={interactionBusy} aria-label="Cancel editing weight"><X size={16} /></button>}
             </div>
             <label>
               <span>Date</span>
@@ -272,7 +337,7 @@ export function TrainingAnalytics({
                 max={todayKey}
                 onChange={(event) => setWeightDate(event.target.value)}
                 aria-describedby="training-weight-form-message"
-                disabled={submitting}
+                disabled={interactionBusy}
                 required
               />
             </label>
@@ -289,13 +354,13 @@ export function TrainingAnalytics({
                   value={weightValue}
                   onChange={(event) => setWeightValue(event.target.value)}
                   aria-describedby="training-weight-form-message"
-                  disabled={submitting}
+                  disabled={interactionBusy}
                   required
                 />
                 <b>kg</b>
               </span>
             </label>
-            <button className="training-analytics-save-weight" type="submit" disabled={submitting} aria-busy={submitting}>
+            <button className="training-analytics-save-weight" type="submit" disabled={interactionBusy} aria-busy={submitting}>
               {submitting
                 ? <InlineSpinner />
                 : editingId ? <PencilSimple size={18} weight="bold" /> : <Plus size={18} weight="bold" />}
@@ -306,13 +371,26 @@ export function TrainingAnalytics({
 
           {weights.length > 0 && (
             <div className="training-analytics-weight-list" aria-label="Recent weight measurements">
-              {weights.slice(-4).reverse().map((entry) => (
-                <button type="button" key={entry.entryKey} onClick={() => editWeight(entry)} disabled={submitting}>
-                  <span>{formatShortDate(entry.dateKey, true)}</span>
-                  <strong>{entry.weightKg.toFixed(1)} kg</strong>
-                  <PencilSimple size={16} aria-hidden="true" />
-                </button>
-              ))}
+              {weights.slice(-4).reverse().map((entry) => {
+                const isSelected = selectedWeight?.entryKey === entry.entryKey;
+                return (
+                  <button
+                    type="button"
+                    className={isSelected ? "is-selected" : ""}
+                    key={entry.entryKey}
+                    onClick={() => selectWeight(entry)}
+                    disabled={interactionBusy}
+                    aria-pressed={isSelected}
+                    aria-label={`${entry.weightKg.toFixed(1)} kilograms on ${formatShortDate(entry.dateKey, true)}. ${isSelected ? "Selected." : "Select measurement."}`}
+                  >
+                    <span>{formatShortDate(entry.dateKey, true)}</span>
+                    <strong>{entry.weightKg.toFixed(1)} kg</strong>
+                    {isSelected
+                      ? <CheckCircle size={17} weight="fill" aria-hidden="true" />
+                      : <CaretRight size={17} weight="bold" aria-hidden="true" />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>

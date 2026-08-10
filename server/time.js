@@ -40,3 +40,34 @@ export function getLogicalDay(value = new Date()) {
 
   return shiftedLocalClock.toISOString().slice(0, 10);
 }
+
+export function getNextLogicalDayStart(value = new Date()) {
+  const date = toValidDate(value);
+  const logicalDay = getLogicalDay(date);
+  const currentBoundary = toValidDate(
+    `${logicalDay}T${String(LOGICAL_DAY_START_HOUR).padStart(2, "0")}:00:00+05:30`,
+    "logical day boundary",
+  );
+  return new Date(currentBoundary.getTime() + 24 * 60 * 60 * 1000);
+}
+
+export function secondsUntilNextLogicalDay(value = new Date()) {
+  const date = toValidDate(value);
+  const nowSeconds = Math.floor(date.getTime() / 1000);
+  const boundarySeconds = Math.floor(getNextLogicalDayStart(date).getTime() / 1000);
+  return Math.max(1, boundarySeconds - nowSeconds);
+}
+
+export function resolveLogicalDateMeasurement(dateKey, now = new Date()) {
+  if (typeof dateKey !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    throw new TypeError("dateKey must use YYYY-MM-DD.");
+  }
+
+  const current = toValidDate(now, "now");
+  const midday = toValidDate(`${dateKey}T12:00:00+05:30`, "dateKey");
+  if (getLogicalDay(midday) !== dateKey) {
+    throw new TypeError("dateKey must contain a real calendar date.");
+  }
+
+  return getLogicalDay(current) === dateKey ? current : midday;
+}

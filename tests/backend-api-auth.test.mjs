@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  handleUnlock,
   handleSkipExercise,
   handleWeightEntry,
 } from "../server/api/handlers.js";
@@ -36,4 +37,28 @@ test("exercise skip and weight-entry mutations reject an unsigned request", asyn
     { method: "DELETE" },
   ));
   assert.equal(deleteResponse.status, 401);
+});
+
+test("unlock issues only a same-day owner cookie", async () => {
+  process.env.OWNER_PIN = "1234";
+  process.env.AUTH_COOKIE_SECRET = "test-secret-that-is-at-least-32-characters";
+  const response = await handleUnlock(new Request(
+    "https://form-shift.example/api/auth/unlock",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://form-shift.example",
+      },
+      body: JSON.stringify({ pin: "1234" }),
+    },
+  ));
+
+  assert.equal(response.status, 200);
+  const cookie = response.headers.get("set-cookie") ?? "";
+  const maxAge = Number(cookie.match(/Max-Age=(\d+)/)?.[1]);
+  assert.ok(maxAge >= 1 && maxAge <= 24 * 60 * 60);
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /SameSite=Strict/);
+  assert.match(cookie, /Secure/);
 });

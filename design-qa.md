@@ -2,106 +2,103 @@
 
 ## Final status
 
-**Passed on 2026-08-09.**
+**Passed on 2026-08-10.**
 
-A fresh authenticated browser pass covered the current desktop and mobile interface, owner unlock, persistent workout lifecycle, training history, weight editing, food interactions, seeded review data, and weekly muscle exposure. No unresolved release-blocking visual or functional issue remained at the end of the pass.
+The final authenticated browser pass covered the current desktop and mobile Workouts surfaces, owner unlock, persistent workout execution and reopening, the 76-item Food Index, Calendar filtering/readouts, Analytics weight selection/editing, the 12-region muscle panel, and post-QA journal cleanup. No unresolved release-blocking visual or functional issue remained.
 
-## Reference captures
+## Canonical release evidence
 
-| Artifact | Viewport | Evidence |
+| Artifact | Browser viewport | Image dimensions | Evidence |
+| --- | ---: | ---: | --- |
+| `docs/screenshots/design-qa-workouts-desktop-viewport-2026-08-10.png` | 1440 × 1000 | 1440 × 1000 | Authenticated desktop shell, selected Session A hero, illustration mosaic, session system, utility controls, and left rail |
+| `docs/screenshots/design-qa-workouts-mobile-viewport-2026-08-10.png` | 390 × 844 | 390 × 844 | Authenticated mobile workout landing, compact sound control, Session A content, illustration mosaic, and fixed bottom navigation |
+
+These two files are the canonical release captures. Older dashboard, runner, food, and analytics screenshots remain historical artifacts and are not used as evidence of the 2026-08-10 visual state.
+
+## Supplied references and same-input comparison
+
+The comparison reused the same three supplied reference images throughout the pass. They were not regenerated, redrawn, or swapped between iterations.
+
+| Supplied reference | Pixel dimensions | Comparison role |
 | --- | ---: | --- |
-| `docs/screenshots/dashboard-desktop.png` | 1440 × 1050 | Authenticated workout dashboard, navigation rail, utility header, selected-session hero, and five-session system |
-| `docs/screenshots/session-mobile.png` | 390 × 844 | Authenticated runner, elapsed timer, progress, exercise illustration, variant choice, and bottom navigation |
-| `docs/screenshots/food-mobile.png` | 390 × 844 | Food-index landing view, food artwork, comparison entry point, and bottom navigation |
-| `docs/screenshots/analytics-mobile.png` | 390 × 844 | Analytics hero, weekly training state, metric cards, and constrained mobile layout before the later density pass |
+| `/Users/badri/Downloads/designs/Dg Dashboard Overview.png` | 2008 × 1420 | Primary desktop shell, rail, header, card hierarchy, palette, and spacing reference |
+| `/Users/badri/Downloads/designs/CHEF SHOP FEATURES.png` | 2022 × 1418 | Editorial hero, split illustration surface, large type, and rounded card reference |
+| `/Users/badri/Downloads/designs/Frf.png` | 2140 × 1606 | Cross-device composition and mobile adaptation reference |
 
-The captures show the same Workouts, Food, Calendar, and Analytics information architecture used by the application. They are representative portfolio evidence rather than pixel-current release snapshots; the Calendar and mobile Analytics layouts received a later refinement pass described below.
+The same-input comparison placed the final 1440 × 1000 desktop capture and 390 × 844 mobile capture against those unchanged references. The final implementation preserves the following fidelity surfaces:
 
-## Desktop comparison
+- pale outer stage around a charcoal rounded application shell;
+- compact dark left rail and restrained white utility header on desktop;
+- large coral primary workout panel with aqua, violet, butter, and sage supporting cards;
+- condensed display typography paired with mono utility labels;
+- flat fills, large radii, thin borders, minimal shadow, and tight data labels; and
+- a mobile composition that removes the rail, preserves the editorial hierarchy, and fixes primary navigation to the bottom edge.
 
-The 1440 × 1050 dashboard was compared directly with `/Users/badri/Downloads/designs/Dg Dashboard Overview.png`.
+The restaurant analytics subject matter was intentionally adapted rather than copied. Revenue and venue cards became workout selection, instructions, progress, Calendar history, Analytics, and food guidance while the visual hierarchy and card rhythm stayed recognizably faithful.
 
-The implementation preserves the reference's intentional visual language:
+## Comparison history
 
-- pale outer stage;
-- charcoal rounded application shell;
-- compact left navigation rail and utility header;
-- large coral primary panel;
-- aqua, violet, butter, and sage supporting cards;
-- condensed display typography paired with mono utility labels; and
-- flat fills, large radii, restrained borders, and minimal shadow.
+| Pass | Comparison | Result |
+| --- | --- | --- |
+| 2026-08-09 baseline | Authenticated desktop at 1440 × 1050 and mobile at 390 × 844 were checked against the supplied dashboard and cross-device references. | Core visual language accepted; later Calendar and mobile Analytics density work remained outside those screenshots. |
+| 2026-08-10 release pass | The unchanged supplied references were compared again with exact-viewport desktop and mobile captures after the Food, Calendar, Analytics, muscle-panel, feedback, and date-handling refinements. | Canonical screenshots above recorded; desktop fidelity and mobile hierarchy passed. |
+| 2026-08-10 cleanup verification | Temporary authenticated workout and weight rows used for interaction checks were removed, then the production journal was counted again. | All four journal tables verified empty while schema and authentication remained available. |
 
-The subject matter is correctly adapted rather than copied literally. Restaurant revenue, venue, and operations cards become a workout library, exercise guidance, session progression, training history, and food reference. The hierarchy and visual rhythm remain faithful while every content surface serves workout execution.
+## Browser checks
 
-## Mobile checks
+### Workouts, sound, and persistence
 
-The current interface was checked at 390 × 844 across the runner, food index, Calendar, and Analytics.
+- The wrong PIN remained rejected and the correct four-digit PIN opened the protected application shell through the built-in keypad without a native text input or phone keyboard.
+- The refreshed authentication contract invalidated the former long-lived token and now expires each unlock at the next 04:00 Chennai workout-day boundary.
+- Session A could be started once; the one-active-session and one-logical-day rules blocked conflicting starts.
+- Set checks, selected variants, skips, restores, completion timestamps, and skip timestamps saved only after their authenticated mutations succeeded.
+- Reload restored the same active session ID, selected variant, checked sets, and skipped state. Closing/reopening the browser and a sleep/wake cycle returned the same server-backed active session through bootstrap rather than creating a new workout.
+- Finishing remained unavailable until every exercise was completed or explicitly skipped. Completing or ending incomplete created history for Calendar and Analytics.
+- The compact sound button exposed its on/muted state, changed it immediately, and retained that preference after reload without adding a server-side journal record.
+- Async actions exposed a working label and spinner, and the synchronous mutation gate prevented rapid duplicate writes.
 
-### Runner
+### Food Index
 
-- The active-session header, overall elapsed timer, progress, instruction image, sets, form cues, and workout runway remain readable in one narrow column.
-- Switching the chest-press setup between machine and dumbbells changed both the instruction artwork and selected-variant title correctly.
-- Completing a set persisted immediately and remained completed after reload.
-- Skipping an exercise changed it to the skipped state, advanced the runner, and preserved a skip timestamp.
-- Restoring that exercise removed the skipped state and derived completion from its saved sets.
-- A second workout could not be started while one session was active.
-- Finishing became available only after every exercise was completed or explicitly skipped.
-- Ending or completing a workout produced a saved history record rather than discarding progress.
+- The index rendered 76 specific food entries and 10 generic family guides across choose-often and limit/avoid lanes.
+- Search covered names, ingredients, tags, and family guidance; category/access filters narrowed the visible collection without changing the source data.
+- Detail views showed a practical portion, energy/protein range, ingredients, method or boundary, and estimate caveat.
+- The temporary comparison tray accepted up to four portions, blocked a fifth, updated combined ranges, and cleared on reload as designed.
 
-### Food
+### Calendar
 
-- Search filtered the index and returned the expected matching cards.
-- Food details opened with the stated portion, energy/protein range, ingredients, method or practical boundary, and estimate caveat.
-- The comparison tray accepted up to four portions, updated combined ranges, and blocked an additional item at the cap.
-- Reload cleared the tray as designed; the food comparison is temporary and is not a food diary.
+- Month navigation and **Go current** respected the 04:00 `Asia/Kolkata` logical-day boundary.
+- Completion-status buttons and the Session A–E filter could be combined, reported the number of shown sessions, and returned to the full log with **Clear**.
+- Monthly summary cards reported sessions, completion, incomplete sessions, and recorded time without inventing missing duration.
+- The filtered readout reported unique training days, median recorded visit length, most-logged session, leading weekday, and weekly activity.
+- Selecting a populated date opened its completed/incomplete session details and returned focus correctly when closed.
 
-### Calendar and Analytics
+### Analytics and weight handling
 
-- Calendar displayed workouts on their logical days, summarized the current month, visualized weekly activity, returned to the current month, and opened a selected day's session details.
-- Analytics reflected the saved session in weekly frequency, duration, completion, session mix, and recent history.
-- The weekly muscle panel mapped completed resistance/core sets to 12 major regions, kept direct and supporting counts visible beside the body colors, and excluded cardio blocks.
-- Snapshot metadata was preferred for new history while the stable exercise-ID fallback populated older and seeded records. Unknown completed work remains visible as an unclassified warning rather than disappearing.
-- A weight entry could be added and then edited, with the revised value retained after refresh.
-- The Analytics page stayed within 390 px, 360 px, and 320 px viewports after the density pass; summary cards, the body map, region ledger, labels, bars, the weight form, and recent history no longer force page-level horizontal expansion. At 360 px and below, the muscle ledger changes to one readable column.
+- The weekly frequency, duration, completion, session mix, and recent-history panels reflected persisted ended sessions only.
+- Selecting a weight bar or recent measurement opened a read-only selection panel. The form changed to edit mode only after the separate **Edit weight** action; saving returned it to add mode.
+- Date-only add/edit payloads were interpreted on the server in Chennai time. A measurement for the current logical day used the current instant instead of a potentially future noon, while valid backdated dates used Chennai noon and impossible dates were rejected.
+- Weight changes persisted after refresh during the temporary QA flow.
 
-### Interaction feedback
+### 12-region muscle panel
 
-- Auth, session-start, set, variant, skip, finish, incomplete-session, and weight mutations expose a working label and spinner while the request is in flight.
-- A synchronous lock prevents a second mutation from starting before React has rendered the disabled state, so rapid double clicks cannot submit duplicate writes.
-- Navigation and page content use short, reduced-motion-safe transitions while data mutations continue to wait for confirmed API responses before updating persistent UI state.
+- The front/back body map covered chest, upper back, lats, shoulders, biceps, triceps, core, hip flexors, quads, hamstrings, glutes, and lower legs.
+- Selecting any region updated the inspector with weighted exposure, direct sets, supporting sets, and training days.
+- The ranked all-region ledger, 0/12 active-region summary, current-logical-week basis, and empty state remained readable on mobile.
+- Cardio remained excluded, snapshot muscle metadata was preferred, stable exercise IDs supported older rows, and unknown completed sets remained visible as unclassified rather than silently disappearing.
+- The copy did not mislabel completed-set distribution as load-based volume, stimulus, recovery, readiness, balance, or muscle growth.
 
-## Authentication and persistence
+## Defects resolved for this release
 
-- An incorrect PIN was rejected without opening the protected journal.
-- The correct PIN unlocked the current application shell.
-- Reload during an active workout restored the same session, selected variant, checked sets, and skipped state from Neon.
-- The one-active-session rule remained enforced during the browser flow.
-- Completed or incomplete session data populated Calendar and Analytics after refresh.
-- Weight edits persisted through the authenticated API.
+- The leg-curl matcher now resolves the specific leg-curl family before the generic curl family.
+- Selected exercise titles remain synchronized with the chosen machine, dumbbell, cable, or bodyweight variant.
+- Mobile Analytics minimum-width constraints prevent page-level horizontal overflow while the 12-region ledger remains readable.
+- Weight inspection no longer enters edit mode implicitly; selection and editing are separate actions.
+- Date-only weight input no longer depends on browser timezone parsing or produces a false future timestamp for the current morning.
+- The Guide and public docs no longer describe the workout journal as memory-only or imply that review rows remain in production.
 
-The food comparison tray was the deliberate exception: reload cleared it because it is a local comparison aid rather than persistent owner data.
+## Production journal cleanup
 
-## Defects resolved during the pass
-
-### Guide persistence message
-
-The Guide still contained a prototype-era banner claiming that reload removed workout state and that no database or history existed. It now states the actual boundary: workout progress, history, selected variants and weight entries persist, while only the food quick-compare tray clears on reload. A source-wide regression test rejects the obsolete persistence claims.
-
-### Leg-curl guide matching
-
-The exercise-guide matcher could classify a leg-curl identifier as the generic curl family. The specific leg-curl match now runs before the generic curl match, so leg-curl exercises receive the correct machine variants, illustrations, and cues.
-
-### Selected-variant title
-
-The runner could update the selected setup while leaving the heading too generic. The current heading includes the selected variant, so the visible title stays aligned with the artwork and instructions.
-
-### Mobile Analytics minimum width
-
-Analytics content could retain an intrinsic width larger than the mobile viewport. Minimum-width constraints were hardened so the grid, panels, charts, labels, and form can shrink inside 390 px without horizontal overflow.
-
-## Seeded review state
-
-The review database is intentionally populated with deterministic sample history: 25 workout sessions across Sessions A–E and 10 body-weight entries. The seed command skips logical workout days occupied by genuine sessions, and rerunning it replaces only its own deterministic rows. `npm run db:seed:reset` removes those sample rows later without deleting genuine journal entries.
+The temporary authenticated QA state was removed after capture: 26 workout sessions, 209 cascaded exercise rows, 387 cascaded set rows, and 11 weight rows were permanently deleted. The operation did not create a recovery copy. A separate dry-run count on 2026-08-10 then confirmed exactly 0 sessions, 0 exercises, 0 sets, and 0 weights. Schema, migrations, environment configuration, and owner authentication were preserved.
 
 ## Automated verification
 
@@ -110,11 +107,10 @@ npm test
 npm run build
 ```
 
-The automated suites cover single-flight action locking, Calendar metrics, weekly muscle exposure and snapshot fallback, seed-data relationships, history calculations, signed-cookie authentication, the 04:00 `Asia/Kolkata` logical-day boundary, session invariants, skip/completion timestamps, workout-history shaping, template variants, schema safeguards, protected API mutations, and static-hosting packaging. The production build verifies the client bundle and expected packaging outputs.
+Verification rerun on 2026-08-10:
 
-Verification rerun on 2026-08-09:
-
-- `npm test` — passed, 47 tests.
+- `npm test` — passed, 67 tests.
 - `npm run build` — passed.
+- Read-only production journal count — passed, all four journal tables at zero.
 
 final result: passed

@@ -9,7 +9,7 @@ Copy `.env.example` to `.env.local` for local development, or configure the same
 | Variable | Requirement |
 | --- | --- |
 | `DATABASE_URL` | Neon pooled Postgres connection string |
-| `OWNER_PIN` | Private owner PIN; never committed or stored in the database |
+| `OWNER_PIN` | Private four-digit owner PIN; never committed or stored in the database |
 | `AUTH_COOKIE_SECRET` | Independent signing secret of at least 32 characters |
 
 Do not reuse the PIN as the cookie secret. No environment values belong in documentation, screenshots, client code, or committed files.
@@ -17,7 +17,8 @@ Do not reuse the PIN as the cookie secret. No environment values belong in docum
 ## Authentication and request boundaries
 
 - `POST /api/auth/unlock` compares the submitted PIN using HMAC-backed constant-time comparison.
-- A successful unlock issues a signed owner token in an `HttpOnly`, `SameSite=Strict` cookie. The cookie is also `Secure` on HTTPS and Vercel runtimes and expires after 30 days.
+- A successful unlock issues a signed owner token in an `HttpOnly`, `SameSite=Strict` cookie. The cookie is also `Secure` on HTTPS and Vercel runtimes and expires at the next 04:00 `Asia/Kolkata` workout-day boundary. The owner therefore unlocks once each logical day.
+- The client uses an accessible on-screen numeric keypad with no text input, so opening the gate on a phone does not summon the native keyboard.
 - The PIN and signing secret remain server-side; the cookie contains a signed, expiring token rather than the PIN.
 - Protected reads require a valid cookie. A locked `GET /api/bootstrap` returns `{ "authenticated": false }` so the client can render the owner gate.
 - Mutations require authentication, an `application/json` body where applicable, and a same-origin `Origin` when the browser sends that header.
@@ -61,14 +62,14 @@ Application checks provide readable errors, while database indexes and checks re
 
 ## Session lifecycle
 
-1. The owner unlocks the app.
+1. The owner unlocks the app for the current 04:00-to-03:59 workout day.
 2. `GET /api/bootstrap` returns templates, logical-day state, an active session if present, up to 120 ended sessions, and the 30 most recent weight entries.
 3. Starting a workout snapshots the chosen template and its exercises—including muscle-exposure metadata—creates all expected set rows, and records the initial variant selections.
-4. Set, variant, and skip changes are written immediately. Reloading or closing the browser does not discard them.
+4. Set, variant, and skip changes are written immediately. Reloading, sleeping and waking the browser, or closing and reopening it does not discard them; bootstrap returns the same active session.
 5. The session can be completed after all exercises are completed or skipped, or explicitly ended as incomplete.
 6. Calendar and Analytics derive their display data from the returned session history. The active workout is excluded from history until it ends. Weekly muscle exposure counts persisted completed resistance/core sets, excludes cardio, and uses stable-ID fallback metadata for older snapshots.
 
-The food quick-compare tray is client-only by design and clears on reload. It is not part of this persistence model.
+The food quick-compare tray is client-only by design and clears on reload. The sound preference is stored in browser local storage so the subtle interface tones remain muted or enabled on that browser, but it is not synchronized owner data. Neither belongs to the Postgres persistence model.
 
 ## API endpoints
 
@@ -117,11 +118,31 @@ Sending `"completed": false` unchecks a set. Sending `"skipped": false` restores
 | Method | Route | Request | Success response |
 | --- | --- | --- | --- |
 | `GET` | `/api/weights?limit=30` | — | `{ "weights": [] }` |
-| `POST` | `/api/weights` | `{ "weightKg": 73.4, "measuredAt": "optional ISO timestamp" }` | `201` with `{ "entry": {} }` |
-| `PUT` | `/api/weights/:entryId` | `{ "weightKg": 73.2, "measuredAt": "ISO timestamp" }` | `{ "entry": {} }` |
+| `POST` | `/api/weights` | `{ "weightKg": 73.4, "date": "YYYY-MM-DD" }`, or an optional ISO `measuredAt` | `201` with `{ "entry": {} }` |
+| `PUT` | `/api/weights/:entryId` | `{ "weightKg": 73.2, "date": "YYYY-MM-DD" }`, or an ISO `measuredAt` | `{ "entry": {} }` |
 | `DELETE` | `/api/weights/:entryId` | No body | `{ "deleted": true, "entryId": "..." }` |
 
-The current Analytics screen exposes add and edit. The delete route exists for API completeness but is not currently surfaced as an Analytics control.
+The current Analytics screen exposes add and edit. Selecting a chart point or recent row only opens a read-only measurement summary; the separate **Edit weight** action intentionally populates the form. The delete route exists for API completeness but is not currently surfaced as an Analytics control.
+
+Date-only input is resolved on the server in `Asia/Kolkata`, not parsed as browser-local midnight. A date matching the current logical day uses the current instant, avoiding a future-noon rejection during the morning. A valid backdated date is stored at noon in Chennai so it remains on the requested calendar day across time zones. Impossible dates and future timestamps are rejected, and the database still checks that `logicalDay` matches `measuredAt` after the 04:00 shift.
+
+## Explicit journal reset
+
+The reset command is deliberately safe by default:
+
+```bash
+npm run db:journal:reset
+```
+
+Without a confirmation flag it prints the credential-free database target and exact journal counts, then exits without deleting anything. Permanent deletion requires the configured database name in the only accepted confirmation flag:
+
+```bash
+npm run db:journal:reset -- --confirm-reset-owner-journal=<database-name>
+```
+
+The confirmed operation locks the four journal tables, deletes workout sessions and weight entries, relies on foreign-key cascades for exercises and sets, and verifies exact zero counts before completing. It preserves schema, migrations, environment configuration, and owner authentication. It creates no recovery copy.
+
+For the 2026-08-10 release, the temporary QA journal was cleared and a later dry run reconfirmed 0 sessions, 0 exercises, 0 sets, and 0 weights in the configured production database.
 
 ## Migrations and verification
 
@@ -144,4 +165,4 @@ Run the backend-focused suite with:
 npm run test:backend
 ```
 
-The suite covers authentication, cookie signing and expiry, logical-day boundaries, session finish/skip invariants, history shaping, snapshot muscle metadata, weekly exposure classification, template variant IDs, migration safeguards, and unauthenticated mutation rejection.
+The suite covers authentication, cookie signing and expiry, logical-day boundaries, current and backdated date-only weight handling, session finish/skip invariants, history shaping, snapshot muscle metadata, weekly exposure classification, template variant IDs, journal-reset safeguards, migration safeguards, and unauthenticated mutation rejection. Active-session reopening was verified in the authenticated browser pass recorded in [design-qa.md](./design-qa.md).

@@ -5,7 +5,9 @@ import {
   CaretRight,
   CheckCircle,
   Clock,
+  FunnelSimple,
   MoonStars,
+  ArrowCounterClockwise,
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
@@ -19,7 +21,9 @@ import {
 } from "./historyUtils.js";
 import {
   buildMonthWeekActivity,
+  filterCalendarRecords,
   summarizeCalendarMonth,
+  summarizeCalendarPatterns,
   summarizeCalendarRecords,
 } from "./calendarMetrics.js";
 import "./TrainingCalendar.css";
@@ -88,6 +92,8 @@ export function TrainingCalendar({
     return new Date(startingDate.getFullYear(), startingDate.getMonth(), 1, 12, 0, 0, 0);
   });
   const [selectedDateKey, setSelectedDateKey] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sessionFilter, setSessionFilter] = useState("all");
   const returnFocusRef = useRef(null);
   const drawerRef = useRef(null);
   const drawerCloseRef = useRef(null);
@@ -97,15 +103,23 @@ export function TrainingCalendar({
     [sessionHistory, logicalDayCutoffHour],
   );
 
+  const visibleRecords = useMemo(
+    () => filterCalendarRecords(records, {
+      status: statusFilter,
+      sessionId: sessionFilter,
+    }),
+    [records, sessionFilter, statusFilter],
+  );
+
   const recordsByDate = useMemo(() => {
     const grouped = new Map();
-    records.forEach((record) => {
+    visibleRecords.forEach((record) => {
       const dayRecords = grouped.get(record.logicalDateKey) ?? [];
       dayRecords.push(record);
       grouped.set(record.logicalDateKey, dayRecords);
     });
     return grouped;
-  }, [records]);
+  }, [visibleRecords]);
 
   const monthCells = useMemo(
     () => buildMonthCells(monthCursor.getFullYear(), monthCursor.getMonth()),
@@ -117,9 +131,17 @@ export function TrainingCalendar({
     () => summarizeCalendarMonth(records, monthPrefix),
     [records, monthPrefix],
   );
+  const visibleMonthSummary = useMemo(
+    () => summarizeCalendarMonth(visibleRecords, monthPrefix),
+    [visibleRecords, monthPrefix],
+  );
+  const monthPatterns = useMemo(
+    () => summarizeCalendarPatterns(visibleMonthSummary.records),
+    [visibleMonthSummary.records],
+  );
   const weekActivity = useMemo(
-    () => buildMonthWeekActivity(monthCells, monthSummary.records),
-    [monthCells, monthSummary.records],
+    () => buildMonthWeekActivity(monthCells, visibleMonthSummary.records),
+    [monthCells, visibleMonthSummary.records],
   );
   const maximumWeeklySessions = Math.max(1, ...weekActivity.map((week) => week.sessions));
   const activeWeeks = weekActivity.filter((week) => week.sessions > 0).length;
@@ -127,6 +149,8 @@ export function TrainingCalendar({
   const selectedRecords = selectedDateKey ? recordsByDate.get(selectedDateKey) ?? [] : [];
   const selectedSummary = summarizeCalendarRecords(selectedRecords);
   const isCurrentMonth = monthPrefix === todayKey.slice(0, 7);
+  const canMoveForward = monthPrefix < todayKey.slice(0, 7);
+  const hasActiveFilters = statusFilter !== "all" || sessionFilter !== "all";
 
   const monthLabel = new Intl.DateTimeFormat(undefined, {
     month: "long",
@@ -172,6 +196,7 @@ export function TrainingCalendar({
   }, [selectedDateKey, selectedRecords.length]);
 
   function moveMonth(offset) {
+    if (offset > 0 && !canMoveForward) return;
     setSelectedDateKey(null);
     setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1, 12, 0, 0, 0));
   }
@@ -186,6 +211,21 @@ export function TrainingCalendar({
     returnFocusRef.current = event.currentTarget;
     setSelectedDateKey(dateKey);
   }
+
+  function clearFilters() {
+    setStatusFilter("all");
+    setSessionFilter("all");
+  }
+
+  const typicalVisit = monthPatterns.typicalMinutes
+    ? `${monthPatterns.typicalMinutes} min`
+    : "Not recorded";
+  const leadingSession = monthPatterns.leadingSession.label
+    ? `Session ${monthPatterns.leadingSession.label}`
+    : monthPatterns.leadingSession.isTied ? "Mixed" : "No sessions";
+  const leadingWeekdayDetail = monthPatterns.leadingWeekday.label
+    ? `${monthPatterns.leadingWeekday.label} appears most often`
+    : monthPatterns.leadingWeekday.isTied ? "No single weekday leads" : "No weekday pattern";
 
   return (
     <div className="history-calendar-page page-enter">
@@ -252,20 +292,95 @@ export function TrainingCalendar({
             >
               {isCurrentMonth ? "Current" : "Go current"}
             </button>
-            <button type="button" onClick={() => moveMonth(1)} aria-label="Show next month">
+            <button
+              type="button"
+              onClick={() => moveMonth(1)}
+              aria-label={canMoveForward ? "Show next month" : "Current month is the latest available month"}
+              disabled={!canMoveForward}
+            >
               <CaretRight size={19} weight="bold" />
             </button>
           </div>
         </header>
 
         <div className="history-calendar-month-stage" key={monthPrefix}>
+          <section className="history-calendar-query" aria-labelledby={`calendar-filter-title-${monthPrefix}`}>
+            <div className="history-calendar-query__heading">
+              <div>
+                <span className="history-calendar-kicker"><FunnelSimple size={15} weight="fill" /> Narrow the log</span>
+                <h3 id={`calendar-filter-title-${monthPrefix}`}>What do you need to find?</h3>
+              </div>
+              <p aria-live="polite">
+                <strong>{visibleMonthSummary.sessions}</strong> of {monthSummary.sessions} {monthSummary.sessions === 1 ? "session" : "sessions"} shown
+              </p>
+            </div>
+
+            <div className="history-calendar-query__controls">
+              <div className="history-calendar-status-filter" role="group" aria-label="Filter sessions by completion status">
+                {[
+                  ["all", "All"],
+                  ["complete", "Finished"],
+                  ["incomplete", "Ended early"],
+                ].map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={statusFilter === value ? "is-active" : ""}
+                    aria-pressed={statusFilter === value}
+                    onClick={() => setStatusFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <label className="history-calendar-session-filter">
+                <span>Session</span>
+                <select value={sessionFilter} onChange={(event) => setSessionFilter(event.target.value)}>
+                  <option value="all">Any session</option>
+                  {SESSION_IDS.map((sessionId) => (
+                    <option value={sessionId} key={sessionId}>Session {sessionId}</option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className="history-calendar-clear-filters"
+                type="button"
+                onClick={clearFilters}
+                disabled={!hasActiveFilters}
+              >
+                <ArrowCounterClockwise size={17} weight="bold" />
+                Clear
+              </button>
+            </div>
+          </section>
+
+          <section className="history-calendar-readout" aria-label={`${monthLabel} patterns from the shown sessions`}>
+            <div>
+              <span>Training days</span>
+              <strong>{monthPatterns.activeDays}</strong>
+              <small>unique dates with a shown session</small>
+            </div>
+            <div>
+              <span>Typical visit</span>
+              <strong>{typicalVisit}</strong>
+              <small>{monthPatterns.recordedDurationCount ? "median recorded duration" : "duration unavailable"}</small>
+            </div>
+            <div>
+              <span>Most logged</span>
+              <strong>{leadingSession}</strong>
+              <small>{leadingWeekdayDetail}</small>
+            </div>
+          </section>
+
           <section className="history-calendar-activity" aria-labelledby={`calendar-activity-title-${monthPrefix}`}>
             <header>
               <div>
                 <span className="history-calendar-kicker">Training pulse</span>
                 <h3 id={`calendar-activity-title-${monthPrefix}`}>Weekly activity</h3>
               </div>
-              <span>{activeWeeks}/{weekActivity.length} active weeks</span>
+              <span>{activeWeeks}/{weekActivity.length} weeks with shown sessions</span>
             </header>
             <div
               className="history-calendar-activity__weeks"
@@ -379,7 +494,15 @@ export function TrainingCalendar({
           {!monthSummary.sessions && (
             <div className="history-calendar-empty" role="status">
               <CalendarBlank size={24} />
-              <div><strong>No sessions in this month.</strong><span>Finished workouts will appear here automatically.</span></div>
+              <div><strong>No sessions in this month.</strong><span>Finished or ended workouts will appear here automatically.</span></div>
+            </div>
+          )}
+
+          {monthSummary.sessions > 0 && !visibleMonthSummary.sessions && (
+            <div className="history-calendar-empty is-filtered" role="status">
+              <FunnelSimple size={24} />
+              <div><strong>No sessions match these filters.</strong><span>Change a filter or show the full month again.</span></div>
+              <button type="button" onClick={clearFilters}>Show all</button>
             </div>
           )}
 

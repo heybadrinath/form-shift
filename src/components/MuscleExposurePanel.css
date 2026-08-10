@@ -8,10 +8,8 @@
 }
 
 .muscle-exposure__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 14px;
 }
 
 .muscle-exposure__header > div:first-child {
@@ -19,14 +17,14 @@
 }
 
 .muscle-exposure__kicker,
-.muscle-exposure__ledger-heading,
-.muscle-exposure__total,
-.muscle-exposure__days,
+.muscle-exposure__stats,
+.muscle-exposure__basis,
 .muscle-map__view-labels,
 .muscle-map__legend,
-.muscle-exposure__ledger li small,
-.muscle-exposure__ledger li b,
-.muscle-exposure__ledger li em {
+.muscle-exposure__focus,
+.muscle-exposure__ledger,
+.muscle-exposure__method,
+.muscle-exposure__warning {
   font-family: var(--data);
 }
 
@@ -43,56 +41,96 @@
 }
 
 .muscle-exposure__stats {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
 }
 
 .muscle-exposure__total,
-.muscle-exposure__days {
+.muscle-exposure__days,
+.muscle-exposure__regions {
   display: grid;
-  place-items: center;
   align-content: center;
-  gap: 1px;
-  min-height: 39px;
-  padding: 6px 10px;
-  border-radius: 999px;
+  gap: 3px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 10px;
+  border-radius: 15px;
   background: var(--ink);
   color: var(--paper);
   line-height: 1;
-  text-transform: uppercase;
 }
 
 .muscle-exposure__days {
   background: var(--violet);
 }
 
-.muscle-exposure__total strong,
-.muscle-exposure__days strong {
-  font-size: 0.84rem;
+.muscle-exposure__regions {
+  background: var(--sage);
+  color: var(--ink);
 }
 
-.muscle-exposure__total span,
-.muscle-exposure__days span {
-  font-size: 0.55rem;
+.muscle-exposure__stats strong {
+  overflow-wrap: anywhere;
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 0.85;
+}
+
+.muscle-exposure__stats span {
+  font-size: 0.52rem;
+  text-transform: uppercase;
 }
 
 .muscle-exposure__intro {
-  max-width: 760px;
-  margin: 12px 0 16px;
+  max-width: 820px;
+  margin: 12px 0;
   color: rgba(32, 32, 31, 0.68);
   font-size: 0.72rem;
   line-height: 1.55;
 }
 
+.muscle-exposure__basis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 13px;
+  padding: 7px;
+  border-radius: 16px;
+  background: var(--ink-raised);
+  color: var(--paper);
+}
+
+.muscle-exposure__basis > span {
+  display: inline-flex;
+  flex: 1 1 170px;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid rgba(247, 247, 242, 0.1);
+  border-radius: 11px;
+  color: rgba(247, 247, 242, 0.66);
+  font-size: 0.55rem;
+}
+
+.muscle-exposure__basis strong {
+  color: var(--paper);
+}
+
+.muscle-exposure__basis svg {
+  flex: 0 0 auto;
+  color: var(--butter);
+}
+
 .muscle-exposure__empty {
   display: grid;
-  gap: 2px;
-  margin: -4px 0 13px;
-  padding: 10px 12px;
+  gap: 3px;
+  margin-bottom: 12px;
+  padding: 11px 13px;
   border: 1px solid var(--ink);
-  border-radius: 13px;
+  border-radius: 14px;
   background: var(--butter);
 }
 
@@ -106,7 +144,8 @@
   line-height: 1.45;
 }
 
-.muscle-exposure__content {
+.muscle-exposure__content,
+.muscle-exposure__inspector {
   display: grid;
   gap: 9px;
   min-width: 0;
@@ -115,7 +154,7 @@
 .muscle-map {
   min-width: 0;
   padding: 14px;
-  border-radius: 23px;
+  border-radius: 24px;
   background: var(--violet);
   color: var(--paper);
 }
@@ -124,7 +163,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 0 5% 2px;
-  font-size: 0.53rem;
+  font-size: 0.55rem;
   font-weight: 600;
   letter-spacing: 0.09em;
   text-align: center;
@@ -135,7 +174,7 @@
   display: block;
   width: 100%;
   height: auto;
-  max-height: 370px;
+  max-height: 385px;
 }
 
 .muscle-map__body {
@@ -153,33 +192,39 @@
   stroke-width: 1.7;
   transform-box: fill-box;
   transform-origin: center;
-  animation: muscle-exposure-region-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: muscle-exposure-region-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: opacity 150ms ease, stroke-width 150ms ease;
+}
+
+.muscle-map__region.is-selected {
+  stroke: var(--paper);
+  stroke-width: 4;
 }
 
 .muscle-map__region.is-none,
 .muscle-map__legend i.is-none,
-.muscle-exposure__ledger li.is-none > i {
+.muscle-exposure__ledger button.is-none .muscle-exposure__ledger-label > i {
   fill: #d7dcda;
   background: #d7dcda;
 }
 
 .muscle-map__region.is-low,
 .muscle-map__legend i.is-low,
-.muscle-exposure__ledger li.is-low > i {
+.muscle-exposure__ledger button.is-low .muscle-exposure__ledger-label > i {
   fill: var(--sage);
   background: var(--sage);
 }
 
 .muscle-map__region.is-moderate,
 .muscle-map__legend i.is-moderate,
-.muscle-exposure__ledger li.is-moderate > i {
+.muscle-exposure__ledger button.is-moderate .muscle-exposure__ledger-label > i {
   fill: var(--butter);
   background: var(--butter);
 }
 
 .muscle-map__region.is-high,
 .muscle-map__legend i.is-high,
-.muscle-exposure__ledger li.is-high > i {
+.muscle-exposure__ledger button.is-high .muscle-exposure__ledger-label > i {
   fill: var(--coral);
   background: var(--coral);
 }
@@ -194,9 +239,9 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 6px 10px;
-  padding-top: 3px;
-  font-size: 0.48rem;
+  gap: 7px 11px;
+  padding-top: 4px;
+  font-size: 0.5rem;
   text-transform: uppercase;
 }
 
@@ -207,22 +252,130 @@
 }
 
 .muscle-map__legend i,
-.muscle-exposure__ledger li > i {
+.muscle-exposure__ledger-label > i {
   display: block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
   border: 1px solid var(--ink);
   border-radius: 50%;
 }
 
-.muscle-map__legend i {
-  width: 9px;
-  height: 9px;
+.muscle-exposure__focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 13px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid rgba(32, 32, 31, 0.14);
+  border-radius: 22px;
+  background: var(--paper-dim);
+}
+
+.muscle-exposure__focus.is-low { background: var(--sage); }
+.muscle-exposure__focus.is-moderate { background: var(--butter); }
+.muscle-exposure__focus.is-high { background: var(--coral); }
+
+.muscle-exposure__focus > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.muscle-exposure__focus > header > div {
+  min-width: 0;
+}
+
+.muscle-exposure__focus > header span,
+.muscle-exposure__focus-value span,
+.muscle-exposure__focus dt {
+  font-size: 0.51rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__focus > header > span {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: rgba(247, 247, 242, 0.62);
+}
+
+.muscle-exposure__focus h3 {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.muscle-exposure__focus-value {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 13px 0;
+  border-block: 1px solid rgba(32, 32, 31, 0.14);
+}
+
+.muscle-exposure__focus-value strong {
+  font-family: var(--display);
+  font-size: clamp(3.5rem, 16vw, 5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.7;
+}
+
+.muscle-exposure__focus-value span {
+  padding-bottom: 2px;
+}
+
+.muscle-exposure__focus dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 0;
+}
+
+.muscle-exposure__focus dl > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(247, 247, 242, 0.58);
+}
+
+.muscle-exposure__focus dt {
+  color: rgba(32, 32, 31, 0.6);
+}
+
+.muscle-exposure__focus dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 0.85;
+}
+
+.muscle-exposure__focus > p {
+  margin: 0;
+  color: rgba(32, 32, 31, 0.67);
+  font-size: 0.58rem;
+  line-height: 1.45;
+}
+
+.muscle-exposure__focus > p strong {
+  color: var(--ink);
 }
 
 .muscle-exposure__ledger {
   min-width: 0;
   padding: 13px;
-  border-radius: 23px;
-  background: var(--sage);
+  border-radius: 22px;
+  background: var(--ink-raised);
+  color: var(--paper);
 }
 
 .muscle-exposure__ledger-heading {
@@ -230,22 +383,21 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 9px;
-  font-size: 0.57rem;
+  margin-bottom: 10px;
+  font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
 .muscle-exposure__ledger-heading small {
-  color: rgba(32, 32, 31, 0.52);
-  font-size: 0.48rem;
+  color: rgba(247, 247, 242, 0.5);
+  font-size: 0.49rem;
   letter-spacing: 0;
 }
 
-.muscle-exposure__ledger ul {
+.muscle-exposure__ledger ol {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
   padding: 0;
   margin: 0;
@@ -253,77 +405,202 @@
 }
 
 .muscle-exposure__ledger li {
+  min-width: 0;
+}
+
+.muscle-exposure__ledger button {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(112px, 0.82fr) minmax(70px, 1.18fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid rgba(247, 247, 242, 0.1);
+  border-radius: 12px;
+  background: rgba(247, 247, 242, 0.04);
+  color: var(--paper);
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.muscle-exposure__ledger button:hover {
+  border-color: rgba(247, 247, 242, 0.42);
+  background: rgba(247, 247, 242, 0.08);
+}
+
+.muscle-exposure__ledger button.is-selected {
+  border-color: var(--paper);
+  background: rgba(247, 247, 242, 0.12);
+  box-shadow: inset 4px 0 0 var(--butter);
+}
+
+.muscle-exposure__ledger-label {
+  display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
-  min-height: 53px;
-  padding: 8px;
-  border: 1px solid rgba(32, 32, 31, 0.11);
-  border-radius: 12px;
-  background: rgba(247, 247, 242, 0.62);
 }
 
-.muscle-exposure__ledger li > i {
-  width: 10px;
-  height: 10px;
-}
-
-.muscle-exposure__ledger li > span {
+.muscle-exposure__ledger-label > span {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
 
-.muscle-exposure__ledger li strong {
+.muscle-exposure__ledger-label strong {
   overflow: hidden;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.muscle-exposure__ledger li small {
-  color: rgba(32, 32, 31, 0.54);
-  font-size: 0.43rem;
+.muscle-exposure__ledger-label small {
+  color: rgba(247, 247, 242, 0.5);
+  font-size: 0.48rem;
   text-transform: uppercase;
 }
 
-.muscle-exposure__ledger li b {
-  font-size: 0.7rem;
+.muscle-exposure__ledger-track {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(247, 247, 242, 0.14);
+  border-radius: 999px;
+  background: rgba(247, 247, 242, 0.08);
 }
 
-.muscle-exposure__ledger li em {
-  grid-column: 2 / -1;
-  color: rgba(32, 32, 31, 0.6);
-  font-size: 0.43rem;
-  font-style: normal;
+.muscle-exposure__ledger-track > i {
+  display: block;
+  width: var(--region-width);
+  min-width: 0;
+  height: 100%;
+  transform-origin: left center;
+  animation: muscle-exposure-track-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.muscle-exposure__ledger-track > i.is-direct {
+  background: var(--coral);
+}
+
+.muscle-exposure__ledger-track > i.is-supporting {
+  background: var(--aqua);
+}
+
+.muscle-exposure__ledger button > b {
+  min-width: 26px;
+  font-family: var(--data);
+  font-size: 0.7rem;
+  text-align: right;
 }
 
 .muscle-exposure__method {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
   margin: 12px 0 0;
-  padding-top: 10px;
+  padding-top: 11px;
   border-top: 1px solid rgba(32, 32, 31, 0.13);
-  color: rgba(32, 32, 31, 0.6);
-  font-size: 0.62rem;
+  color: rgba(32, 32, 31, 0.62);
+  font-size: 0.61rem;
   line-height: 1.5;
+}
+
+.muscle-exposure__method svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 .muscle-exposure__warning {
   margin: 8px 0 0;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 9px 11px;
+  border-radius: 11px;
   background: color-mix(in srgb, var(--coral) 24%, var(--paper));
   color: rgba(32, 32, 31, 0.72);
-  font-family: var(--data);
-  font-size: 0.52rem;
+  font-size: 0.54rem;
   line-height: 1.45;
 }
 
 @keyframes muscle-exposure-region-in {
-  from {
-    opacity: 0.35;
-    transform: scale(0.92);
+  from { opacity: 0.35; transform: scale(0.92); }
+}
+
+@keyframes muscle-exposure-track-in {
+  from { transform: scaleX(0); }
+}
+
+@media (min-width: 600px) {
+  .muscle-exposure {
+    padding: 25px 22px;
+  }
+
+  .muscle-exposure__header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .muscle-exposure__stats {
+    width: min(390px, 46vw);
+  }
+
+  .muscle-exposure__ledger ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .muscle-exposure__ledger button {
+    grid-template-columns: minmax(94px, 0.9fr) minmax(54px, 1.1fr) auto;
+  }
+}
+
+@media (min-width: 980px) {
+  .muscle-exposure__content {
+    grid-template-columns: minmax(350px, 0.78fr) minmax(520px, 1.22fr);
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .muscle-map {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 570px;
+    padding: 18px;
+  }
+
+  .muscle-map__svg {
+    max-height: 455px;
+  }
+
+  .muscle-exposure__focus {
+    grid-template-columns: minmax(0, 0.9fr) minmax(190px, 1.1fr);
+    align-items: start;
+    min-height: 205px;
+    padding: 18px;
+  }
+
+  .muscle-exposure__focus > header,
+  .muscle-exposure__focus > p {
+    grid-column: 1;
+  }
+
+  .muscle-exposure__focus-value {
+    grid-column: 1;
+  }
+
+  .muscle-exposure__focus dl {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    grid-template-columns: minmax(0, 1fr);
+    align-self: stretch;
+  }
+
+  .muscle-exposure__focus dl > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .muscle-exposure__ledger {
+    padding: 15px;
   }
 }
 
@@ -333,78 +610,70 @@
     border-radius: 24px;
   }
 
-  .muscle-exposure__header {
-    gap: 8px;
-  }
-
   .muscle-exposure__kicker {
-    font-size: 0.57rem;
+    font-size: 0.58rem;
   }
 
   .muscle-exposure__header h2 {
-    margin-top: 4px;
     font-size: clamp(1.95rem, 9.5vw, 2.35rem);
   }
 
-  .muscle-exposure__stats {
-    gap: 4px;
+  .muscle-exposure__stats strong {
+    font-size: 1.35rem;
   }
 
-  .muscle-exposure__total,
-  .muscle-exposure__days {
-    min-height: 32px;
-    padding: 5px 8px;
-  }
-
-  .muscle-exposure__total strong,
-  .muscle-exposure__days strong {
-    font-size: 0.72rem;
-  }
-
-  .muscle-exposure__total span,
-  .muscle-exposure__days span {
-    font-size: 0.42rem;
+  .muscle-exposure__stats span {
+    font-size: 0.5rem;
   }
 
   .muscle-exposure__intro {
-    margin: 9px 0 11px;
-    font-size: 0.64rem;
-    line-height: 1.45;
+    font-size: 0.65rem;
   }
 
-  .muscle-exposure__empty {
-    margin: -2px 0 10px;
-    padding: 8px 10px;
+  .muscle-exposure__basis {
+    gap: 4px;
+    padding: 5px;
   }
 
-  .muscle-exposure__empty strong {
-    font-size: 0.68rem;
-  }
-
-  .muscle-exposure__empty span {
-    font-size: 0.56rem;
-  }
-
-  .muscle-exposure__content {
-    gap: 7px;
+  .muscle-exposure__basis > span {
+    flex-basis: 130px;
+    min-height: 38px;
+    padding: 6px 8px;
+    font-size: 0.52rem;
   }
 
   .muscle-map,
+  .muscle-exposure__focus,
   .muscle-exposure__ledger {
-    border-radius: 18px;
+    border-radius: 19px;
   }
 
   .muscle-map {
     padding: 10px;
   }
 
-  .muscle-map__view-labels {
-    font-size: 0.47rem;
+  .muscle-map__legend {
+    font-size: 0.48rem;
   }
 
-  .muscle-map__legend {
-    gap: 5px 8px;
-    font-size: 0.42rem;
+  .muscle-exposure__focus {
+    padding: 12px;
+  }
+
+  .muscle-exposure__focus h3 {
+    font-size: 1.75rem;
+  }
+
+  .muscle-exposure__focus dl > div {
+    padding: 8px;
+  }
+
+  .muscle-exposure__focus dt {
+    font-size: 0.48rem;
+  }
+
+  .muscle-exposure__focus dd {
+    font-size: 1.35rem;
   }
 
   .muscle-exposure__ledger {
@@ -412,101 +681,63 @@
   }
 
   .muscle-exposure__ledger-heading {
-    margin-bottom: 7px;
-    font-size: 0.51rem;
+    font-size: 0.54rem;
   }
 
   .muscle-exposure__ledger-heading small {
-    font-size: 0.43rem;
+    font-size: 0.47rem;
   }
 
-  .muscle-exposure__ledger li {
-    grid-template-columns: 9px minmax(0, 1fr) auto;
-    gap: 5px;
-    min-height: 49px;
-    padding: 7px;
-    border-radius: 10px;
+  .muscle-exposure__ledger button {
+    grid-template-columns: minmax(104px, 0.92fr) minmax(62px, 1.08fr) auto;
+    min-height: 58px;
+    padding-inline: 9px;
   }
 
-  .muscle-exposure__ledger li > i {
-    width: 9px;
-    height: 9px;
+  .muscle-exposure__ledger-label strong {
+    font-size: 0.61rem;
   }
 
-  .muscle-exposure__ledger li strong {
-    font-size: 0.59rem;
-  }
-
-  .muscle-exposure__ledger li small,
-  .muscle-exposure__ledger li em {
-    font-size: 0.48rem;
-  }
-
-  .muscle-exposure__ledger li b {
-    font-size: 0.63rem;
+  .muscle-exposure__ledger-label small {
+    font-size: 0.49rem;
   }
 
   .muscle-exposure__method {
-    margin-top: 9px;
-    padding-top: 8px;
-    font-size: 0.55rem;
-    line-height: 1.4;
+    font-size: 0.57rem;
   }
 
   .muscle-exposure__warning {
-    font-size: 0.48rem;
+    font-size: 0.51rem;
   }
 }
 
 @media (max-width: 360px) {
-  .muscle-exposure__ledger ul {
+  .muscle-exposure__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .muscle-exposure__total,
+  .muscle-exposure__days,
+  .muscle-exposure__regions {
+    padding-inline: 8px;
+  }
+
+  .muscle-exposure__focus dl {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .muscle-exposure__ledger li {
-    min-height: 47px;
-  }
-}
-
-@media (min-width: 900px) {
-  .muscle-exposure {
-    padding: 25px 22px;
-  }
-
-  .muscle-exposure__intro {
-    margin-bottom: 18px;
-  }
-
-  .muscle-exposure__content {
-    grid-template-columns: minmax(350px, 0.82fr) minmax(460px, 1.18fr);
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .muscle-map,
-  .muscle-exposure__ledger {
-    min-height: 430px;
-  }
-
-  .muscle-map {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
+  .muscle-exposure__focus dl > div {
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    padding: 18px;
   }
 
-  .muscle-map__svg {
-    max-height: 390px;
+  .muscle-exposure__ledger button {
+    grid-template-columns: minmax(96px, 1fr) auto;
   }
 
-  .muscle-exposure__ledger {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-    padding: 16px;
-  }
-
-  .muscle-exposure__ledger ul {
-    align-content: stretch;
+  .muscle-exposure__ledger-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 

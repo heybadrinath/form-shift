@@ -6,7 +6,8 @@ import {
 import { AppError } from "./errors.js";
 
 export const AUTH_COOKIE_NAME = "form_shift_owner";
-export const DEFAULT_AUTH_TTL_SECONDS = 60 * 60 * 24 * 30;
+export const AUTH_TOKEN_VERSION = 2;
+export const DEFAULT_AUTH_TTL_SECONDS = 60 * 60 * 24;
 
 function mac(secret, value) {
   return createHmac("sha256", secret).update(value).digest();
@@ -31,8 +32,7 @@ function assertSecret(secret) {
 
 export function verifyOwnerPin(candidate, configuredPin, secret) {
   assertSecret(secret);
-  if (typeof candidate !== "string" || typeof configuredPin !== "string") return false;
-  if (candidate.length < 4 || candidate.length > 64 || configuredPin.length < 4) return false;
+  if (!/^\d{4}$/.test(candidate ?? "") || !/^\d{4}$/.test(configuredPin ?? "")) return false;
 
   return safeEqual(
     mac(secret, `candidate:${candidate}`),
@@ -45,7 +45,7 @@ export function createAuthToken(secret, options = {}) {
   const issuedAt = Math.floor((options.nowMs ?? Date.now()) / 1000);
   const ttlSeconds = options.ttlSeconds ?? DEFAULT_AUTH_TTL_SECONDS;
   const payload = {
-    version: 1,
+    version: AUTH_TOKEN_VERSION,
     issuedAt,
     expiresAt: issuedAt + ttlSeconds,
     nonce: options.nonce ?? randomBytes(18).toString("base64url"),
@@ -69,13 +69,13 @@ export function verifyAuthToken(token, secret, options = {}) {
     const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
     const now = Math.floor((options.nowMs ?? Date.now()) / 1000);
     if (
-      payload.version !== 1
+      payload.version !== AUTH_TOKEN_VERSION
       || !Number.isInteger(payload.issuedAt)
       || !Number.isInteger(payload.expiresAt)
       || typeof payload.nonce !== "string"
       || payload.issuedAt > now + 60
       || payload.expiresAt <= now
-      || payload.expiresAt - payload.issuedAt > 60 * 60 * 24 * 90
+      || payload.expiresAt - payload.issuedAt > DEFAULT_AUTH_TTL_SECONDS
     ) {
       return null;
     }

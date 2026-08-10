@@ -84,7 +84,7 @@ export async function readJson(request, maxBytes = 8_192) {
 export function getAuthConfig(env = process.env) {
   const pin = env.OWNER_PIN;
   const secret = env.AUTH_COOKIE_SECRET;
-  if (typeof pin !== "string" || pin.length < 4 || typeof secret !== "string" || secret.length < 32) {
+  if (!/^\d{4}$/.test(pin ?? "") || typeof secret !== "string" || secret.length < 32) {
     throw new AppError(
       "server_misconfigured",
       "Owner authentication is not configured.",
